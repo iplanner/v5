@@ -12,25 +12,13 @@ export default function usePostgres(options = {}) {
       POSTGRES_PASSWORD,
       POSTGRES_DATABASE,
       PGBOUNCER_HOST,
-      session
     } = useRuntimeConfig()
 
     const isProd = process.env.NODE_ENV === 'production'
 
     const host = isProd ? PGBOUNCER_HOST : POSTGRES_HOST;
 
-    console.log({
-      POSTGRES_HOST,
-      POSTGRES_USERNAME,
-      POSTGRES_PASSWORD,
-      POSTGRES_DATABASE,
-      PGBOUNCER_HOST,
-      session,
-      isProd : process.env.NODE_ENV === 'production'
-    });
-
     if (!host) {
-
       throw new Error(
         `DB host missing. In prod set PGBOUNCER_HOST, in dev set POSTGRES_HOST (got prod=${isProd}).`
       )
