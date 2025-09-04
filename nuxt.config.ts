@@ -26,17 +26,26 @@ export default defineNuxtConfig({
       pathPrefix: false
     }
   ],
-  runtimeConfig : extendRuntimeConfig({
+  runtimeConfig: {
+    // Server-only (kommen von Render als process.env)
+    POSTGRES_HOST: process.env.POSTGRES_HOST,
+    POSTGRES_USERNAME: process.env.POSTGRES_USERNAME,
+    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD,
+    POSTGRES_DATABASE: process.env.POSTGRES_DATABASE,
+    POSTGRES_PORT: process.env.POSTGRES_PORT || '5432',
+
+    PGBOUNCER_HOST: process.env.PGBOUNCER_HOST,   // bei dir: v5-pgbouncer
+    PGBOUNCER_PORT: process.env.PGBOUNCER_PORT || '5432',
 
     session: {
-      name: "iplanner-uid",
-      cookie: {
-        secure : process.env.NODE_ENV === 'production'
-      }
+      name: 'iplanner-uid',
+      password: process.env.NUXT_SESSION_PASSWORD as string,
+      cookie: { secure: process.env.NODE_ENV === 'production' }
     },
-    PGBOUNCER_HOST : 'v5-pgbouncer',
-    POSTGRES_HOST: process.env.POSTGRES_HOST,
-  }),
+
+    // Public Keys (falls nötig)
+    public: {}
+  },
   vite: {
     plugins: [
       tailwindcss(),
