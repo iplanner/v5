@@ -14,7 +14,10 @@
     "@nuxt/image": "^1.11.0",
     "@tailwindcss/vite": "^4.1.12",
     "@vueuse/nuxt": "^13.9.0",
+    "dotenv": "^17.2.2",
     "nuxt": "^4.1.0",
+    "nuxt-auth-utils": "^0.5.23",
+    "postgres": "^3.4.7",
     "tailwindcss": "^4.1.12",
     "vue": "^3.5.20",
     "vue-router": "^4.5.1"

@@ -2,13 +2,14 @@
 
 definePageMeta({
   requiresAuth: false,
-  scrollToTop : true
 })
 useHead({
   title: () => 'i-Planner',
 })
+
+
 </script>
 
 <template>
-     Hello Index
+    Hello Login
 </template>
