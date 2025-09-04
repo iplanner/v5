@@ -11,28 +11,34 @@ export default function usePostgres(options = {}) {
       POSTGRES_USERNAME,
       POSTGRES_PASSWORD,
       POSTGRES_DATABASE,
-      POSTGRES_PORT,
       PGBOUNCER_HOST,
-      PGBOUNCER_PORT
     } = useRuntimeConfig()
 
     const isProd = import.meta.prod;
 
-    const host = isProd
-      ? (PGBOUNCER_HOST || POSTGRES_HOST)
-      : POSTGRES_HOST || 'localhost'
+    const host = isProd ? PGBOUNCER_HOST : POSTGRES_HOST;
 
-    const port = isProd
-      ? Number(PGBOUNCER_PORT || 6432)
-      : Number(POSTGRES_PORT || 5432)
+    if (!host) {
 
+      console.log({
+      POSTGRES_HOST,
+      POSTGRES_USERNAME,
+      POSTGRES_PASSWORD,
+      POSTGRES_DATABASE,
+      PGBOUNCER_HOST,
+    });
+
+      throw new Error(
+        `DB host missing. In prod set PGBOUNCER_HOST, in dev set POSTGRES_HOST (got prod=${isProd}).`
+      )
+    }
 
     // SSL nur extern erforderlich (z. B. lokal zu Render-DB)
     const ssl = isProd ? undefined : 'require'
 
     const defaults = {
       host,
-      port,
+      port : 5432,
       database: POSTGRES_DATABASE,
       username: POSTGRES_USERNAME,
       password: POSTGRES_PASSWORD,
