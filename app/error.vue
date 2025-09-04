@@ -1,5 +1,7 @@
 <script setup>
-const props = defineProps()
+const props = defineProps({
+  error : { type: Object, default: () => ({}) }
+})
 
 const handleError = () => clearError({ redirect: '/' })
 </script>

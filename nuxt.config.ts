@@ -36,6 +36,8 @@ export default defineNuxtConfig({
     PGBOUNCER_HOST: process.env.PGBOUNCER_HOST,
     PGBOUNCER_PORT: process.env.PGBOUNCER_PORT || '5432',
 
+    IP_INFO_DEFAULT_IP : process.env.IP_INFO_DEFAULT_IP,
+
     session: {
       name: 'iplanner-uid',
       password: process.env.NUXT_SESSION_PASSWORD as string,
@@ -45,6 +47,24 @@ export default defineNuxtConfig({
     // Public Keys (falls nötig)
     public: {
     }
+  },
+  imports : {
+    dirs : [
+      '../shared',
+      '../server/models',
+      '../stores'
+    ]
+  },
+  nitro: {
+    experimental : {
+      websocket : true,
+    },
+    imports : {
+      dirs : [
+        'shared',
+        'server/models',
+      ]
+    },
   },
   vite: {
     plugins: [

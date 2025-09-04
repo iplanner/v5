@@ -1,9 +1,10 @@
+import { useSocketServer } from "../utils/useSocketServer";
+
 export default defineEventHandler( async event => {
 
     const config = useRuntimeConfig(event);
     const { session } = event.context;
 
-    let db;
     try {
 
         if (!session){
@@ -12,30 +13,30 @@ export default defineEventHandler( async event => {
         }
            
         
-        /* db = await useDatabase();
+        const db = usePostgres();
 
-        // delete all sessions in users_session
-        const { rows : [deletedSession]} = await db.query(
-            `DELETE FROM users_session WHERE cid = $1 AND kid = $2 RETURNING *`,
-            [ session.cid, session.kid]
-        );
-        logSuccess(`Logout : id ${deletedSession?.id} ... killed in users_session `)
+        const res = await db`
+            DELETE FROM users_session
+            WHERE cid = ${session.cid} AND kid = ${session.kid}
+            RETURNING id, guid
+        `
+        const killed = Array.isArray(res) ? res.length : 0
+        console.log(`[logout] deleted ${killed} row(s) from users_session`)
 
         // close Websocket connection for user
-        const { close } = websocket( session.guid );
+        const { close } = useSocketServer( session.guid );
         close();
-        logSuccess(`Logout : websocket for ${session.guid} closed... `);
+        console.log(`[logout] : websocket for ${session.guid} closed... `);
 
         // clear session cookie
         await clearUserSession(event);
-        logSuccess(`Logout : cookie ${config.session.name} cleared...`)
+        console.log(`Logout : cookie ${config.session.name} cleared...`)
         
-        return sendRedirect(event, "/login/notice?reason=logged-out", 302) */
+        return sendRedirect(event, "/login/notice?reason=logged-out", 302)
 
     } catch (error) {
 
         console.error(error);
-
         return sendRedirect(event, "/login", 302);
     }
   
