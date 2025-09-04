@@ -12,6 +12,7 @@ export default function usePostgres(options = {}) {
       POSTGRES_PASSWORD,
       POSTGRES_DATABASE,
       PGBOUNCER_HOST,
+      session
     } = useRuntimeConfig()
 
     const isProd = import.meta.prod;
@@ -26,6 +27,8 @@ export default function usePostgres(options = {}) {
       POSTGRES_PASSWORD,
       POSTGRES_DATABASE,
       PGBOUNCER_HOST,
+      session,
+      meta : import.meta
     });
 
       throw new Error(
