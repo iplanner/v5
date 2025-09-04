@@ -27,12 +27,15 @@ export default defineNuxtConfig({
     }
   ],
   runtimeConfig : extendRuntimeConfig({
+
     session: {
       name: "iplanner-uid",
       cookie: {
-        secure : import.meta.dev === false
+        secure : process.env.NODE_ENV === 'production'
       }
     },
+    PGBOUNCER_HOST : 'v5-pgbouncer',
+    POSTGRES_HOST: process.env.POSTGRES_HOST,
   }),
   vite: {
     plugins: [
