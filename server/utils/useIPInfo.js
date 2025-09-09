@@ -1,6 +1,6 @@
 export async function useIPInfo(event) {
   
-    const config = useRuntimeConfig(event);
+  const config = useRuntimeConfig(event);
   const headers = getRequestHeaders(event);
   
   // Standardwerte für den Provider

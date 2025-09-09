@@ -1,5 +1,3 @@
-import { createSSRApp } from 'vue'
-import { renderToString } from 'vue/server-renderer'
 import dayjs from "dayjs";
 import jwt from "jsonwebtoken";
 
@@ -7,34 +5,60 @@ export default defineEventHandler(async (event) => {
   
   const config = useRuntimeConfig(event);
   const headers = getRequestHeaders(event);
-  let { username, password, subdomain = "" } = await readBody(event);
+  const url = getRequestURL(event);
 
-  if (!subdomain.length) {
-    subdomain = headers.host.split(".")[0];
+  let { username, password, subdomain = "" } = await readBody(event);
+  username = String(username || "").trim();
+
+  if (!subdomain) {
+    const host = headers["x-forwarded-host"] || headers.host || "";
+    const bareHost = host.split(":")[0];
+    const parts = bareHost.split(".");
+    subdomain = parts.length > 2 ? parts[0] : "";
   }
 
-  const htmlContent = await renderVueComponent(componentName, props)
-
- 
   try {
-
+    
     const db = usePostgres();
 
-    const { browser, os, device } = useUserAgent(event);
-    const provider = await getIpInfo(event);
+    // 1) User laden
+    const [user] = await db`
+      SELECT *
+      FROM users
+      WHERE username = ${username}
+      ORDER BY id DESC
+      LIMIT 1
+    `;
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
 
-    // 1. select user by username & subdomain
+    const { id : uid, kid, guid } = user;
 
-    const user = await UserModel.getByUsername(username, subdomain);
-    if (!user) throw new Error("USER_NOT_FOUND");
+    const organizations = await db`
+        SELECT 
+          uo.oid,
+          uo.role,
+          uo.start_url,
+          o.cid,
+          o.subdomain,
+          o.name
+        FROM users_organizations uo
+        INNER JOIN organizations o ON uo.oid = o.id
+        WHERE uo.uid = ${user.id}
+      `;
 
-    const { cid, kid, guid, start_url } = user;
+    if (!organizations.length) {
+      throw new Error("NO_ORGANIZATION_FOUND");
+    }
+  
 
-    // 2.Verify password && check if password is skipped by login cookie === one time password
+    // 2) Passwort prüfen ODER One-Time-Login via Prozess-Cookie
     let isValid = false;
+
     if (password === config.IP_PROCESS_ID_COOKIE) {
-      const cookie = getCookie(event, config.IP_PROCESS_ID_COOKIE);
-      const processId = cookie ? verifyCookie(cookie) : 0;
+      const signedCookie = getCookie(event, config.IP_PROCESS_ID_COOKIE);
+      const processId = signedCookie ? verifyCookie(signedCookie) : 0;
 
       if (!processId) {
         throw new Error(
@@ -42,28 +66,21 @@ export default defineEventHandler(async (event) => {
         );
       }
 
-      const {
-        rows: [form],
-      } = await db.query(
-        `
-              SELECT data 
-              FROM login_process 
-              WHERE id = $1;
-              `,
-        [processId]
-      );
-      const process = form?.data || {};
+      const [form] = await db`
+        SELECT data
+        FROM users_login_process
+        WHERE id = ${processId}
+      `;
+      const processData = form?.data || {};
 
       if (
-        process.cid === cid &&
-        process.kid === kid &&
-        process.email === username &&
-        process.subdomain === subdomain
+        Number(processData.kid) === Number(kid) &&
+        String(processData.email).trim() === username &&
+        String(processData.subdomain).trim() === subdomain
       ) {
         isValid = true;
 
-        await db.query(`DELETE FROM login_process WHERE id = $1;`, [processId]);
-
+        await db`DELETE FROM users_login_process WHERE id = ${processId}`;
         deleteCookie(event, config.IP_PROCESS_ID_COOKIE);
       }
     }
@@ -71,22 +88,44 @@ export default defineEventHandler(async (event) => {
     if (!isValid) {
       isValid = await verifyPassword(user.password, password);
     }
-    if (!isValid) throw new Error(`WRONG_PASSWORD`, { cause: { username } });
+    if (!isValid) {
+      throw new Error(`WRONG_PASSWORD`, { cause: { username } });
+    }
 
-    // 3. check user_devices
-    const currentDevice = await selectCurrentDevice(db, {
-      cid,
-      kid,
-      device,
-      os,
-      browser,
-    });
-    const countDevices = await countUserDevices(db, cid, kid);
+    // 3) Geräteprüfung
+    const userAgent = useUserAgent(event); // muss osvendor, osmodel, os, device, browser, browserversion liefern
+    const provider = await useIPInfo(event); // ip, city, region, country, loc, org, postal, timezone
 
-    if (currentDevice.length || countDevices === 0) {
-      if (user.twofactorauth) {
-        const code = Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
-        await sendCode({ mobile: user.twofactormobile, code });
+    console.log('3. userAgent', userAgent);
+    console.log('3. provider', provider);
+
+    const deviceRows = await db`
+      SELECT *
+      FROM users_devices
+      WHERE kid = ${kid}
+        AND osvendor = ${userAgent.osvendor}
+        AND osmodel = ${userAgent.osmodel}
+        AND os = ${userAgent.os}
+        AND device = ${userAgent.device}
+        AND browser = ${userAgent.browser}
+        AND split_part(browserversion, '.', 1) = ${String(userAgent.browserversion).split(".")[0] || "unknown"}
+    `;
+
+     console.log('3. deviceRows', deviceRows);
+
+    const [{ count: userDeviceCount }] = await db`
+      SELECT COUNT(*)::int AS count
+      FROM users_devices
+      WHERE kid = ${kid}
+    `;
+
+    console.log('3. userDeviceCount', userDeviceCount);
+
+    if (deviceRows.length > 0 || userDeviceCount === 0) {
+      // Gerät ist bekannt ODER es ist das erstes Gerät in der Tabelle
+      if (user.tfa) {
+        const code = Math.floor(Math.random() * 900000) + 100000;
+        await useMessageBird({ mobile: user.tfa_mobile_number, code });
 
         return {
           path: `/login/notice?reason=two-factor-auth&username=${encodeURIComponent(
@@ -94,19 +133,21 @@ export default defineEventHandler(async (event) => {
           ).replace("%40", "@")}`,
         };
       } else {
-        await SessionModel.delete(user);
-
-        const success = await SessionModel.insert({
-          cid: cid,
-          kid: kid,
-          guid: guid,
-          osvendor: device.vendor,
-          osmodel: device.model,
-          os: os.name,
-          osversion: os.version,
-          device: device.type,
-          browser: browser.name,
-          browserversion: browser.version,
+        // Sessions neu setzen
+        if( userDeviceCount > 0){
+          await UsersSession.delete(kid);
+        }
+        
+        const inserted = await UsersSession.insert({
+          kid,
+          guid,
+          osvendor: userAgent.osvendor,
+          osmodel: userAgent.osmodel,
+          os: userAgent.os,
+          osversion: userAgent.osversion,
+          device: userAgent.device,
+          browser: userAgent.browser,
+          browserversion: userAgent.browserversion, // FIX
           ip: provider.ip,
           ipcity: provider.city,
           ipregion: provider.region,
@@ -117,40 +158,39 @@ export default defineEventHandler(async (event) => {
           iptimezone: provider.timezone,
         });
 
-        if (!success) {
+         console.log('3. inserted',inserted);
+
+        if (!inserted) {
           throw new Error(`INSERT_USER_SESSION_FAILED`);
         }
 
-        // check if more than 3 devices exist in table
-        if (countDevices > 3) {
-          const { rowCount: deleted } = await db.query(
-            `
-                  DELETE FROM users_devices
-                  WHERE ctid IN (
-                    SELECT ctid
-                    FROM users_devices
-                    WHERE cid = $1 AND kid = $2
-                    ORDER BY inserted_at ASC
-                    LIMIT $3
-                  )
-                  `,
-            [cid, kid, countDevices - 3]
-          );
-
-          if (deleted > 0) {
-            logSuccess(
-              `Deleted ${deleted} oldest devices for cid: ${cid}, kid: ${kid}`
+        // Geräte auf max. 3 trimmen
+        if (userDeviceCount > 3) {
+          const deleted = await db`
+            DELETE FROM users_devices
+            WHERE ctid IN (
+              SELECT ctid
+              FROM users_devices
+              WHERE kid = ${kid}
+              ORDER BY inserted_at ASC
+              LIMIT ${userDeviceCount - 3}
+            )
+            RETURNING ctid
+          `;
+          if (deleted.length > 0) {
+            console.log(
+              `Deleted ${deleted.length} oldest devices for kid=${kid}`
             );
           }
         }
 
-        await setUserSession(
+        await replaceUserSession(
           event,
-          { user: { cid, kid, guid } },
+          { user: { uid, kid, guid, organizations : organizations.map( o => ({ oid : o.oid, cid : o.cid})) } },
           { maxAge: user.sessiontimeout }
         );
 
-        const { send } = websocket(guid);
+        const { send } = useSocketServer(guid);
         send({
           action: "SESSION_LOGOUT",
           payload: {
@@ -163,48 +203,83 @@ export default defineEventHandler(async (event) => {
           },
         });
 
-        return { path: start_url };
+
+        // Redirect to....
+
+        const u = await getUserSession(event) ;
+        console.log( 'user', JSON.stringify(u, null, 2))
+        console.log( 'subdomain', subdomain)
+
+        if(subdomain.length && subdomain != 'www'){
+
+          const { oid, role, start_url = "" } = organizations.find( o => o.subdomain === subdomain) ?? {};
+
+          if(start_url){
+             return { path: start_url }
+          }else{
+            if(role === 'admin'){
+               return { path: `/organizations/${oid}` }
+            }else{
+               return { path: `/app` }
+            }
+          }
+
+        }else{
+
+          return { path: 'organizations'};
+
+        }
+
       }
+
+
+
     } else {
-      logSuccess(
-        `Login : Device ${device.vendor} über  ${browser.name} - ${browser.version} is not known...`
-      );
+      // Unbekanntes Gerät → E-Mail zur Freigabe
+      if (!config.IP_JWT_SECRET) {
+        console.warn("IP_JWT_SECRET is missing!");
+      }
 
       const jwtToken = jwt.sign(
-        { cid, kid, guid, payload: { device, os, browser } },
-        config.JWT_SECRET,
         {
-          algorithm: "HS256",
-          expiresIn: "1h",
-        }
+          cid,
+          kid,
+          guid,
+          payload: { device: userAgent.device, os: userAgent.os, browser: userAgent.browser },
+        },
+        config.IP_JWT_SECRET,
+        { algorithm: "HS256", expiresIn: "1h" }
       );
 
-      const authorizeUrl = getBaseUrl(
-        subdomain,
-        `/redirect?reason=device-authorization&token=${jwtToken}`
-      );
-
-      const title = "Anmeldeversuch mit einem neuen Gerät";
-      const template = await useCompiler("login-new-device.vue", {
-        props: {
-          title,
+      await useSendgrid({
+        to: username,
+        templateId: "d-b1aa0d9e26074001bf2ff5bc9a1820a8",
+        templateData: {
+          title: "Anmeldeversuch mit einem neuen Gerät",
+          primaryColor: "#1a73e8",
           text: `Am ${dayjs().format("DD.MM.YYYY")} um ${dayjs().format(
-            "HH.mm"
-          )} Uhr wurde ein Versuch unternommen, mit dem folgenden Gerät auf dein Konto ${username} unter der Adresse ${subdomain}.i-planner.cloud zuzugreifen. Aus Sicherheitsgründen wurde der Zugriff von uns blockiert.`,
-          ipAdress: provider.ip,
-          provider: provider.org,
-          vendor: device.vendor,
-          type: ucFirst(device.type),
-          osName: os.name,
-          osVersion: os.version,
-          browser: browser.name,
-          authorizeUrl,
-          username: username,
-          subdomain: `${subdomain}.i-planner.cloud`,
+            "HH:mm"
+          )} Uhr wurde versucht, sich mit einem neuen Gerät bei deinem Konto ${username} unter ${subdomain}.i-planner.cloud anzumelden. Aus Sicherheitsgründen haben wir den Zugriff blockiert.`,
+          provider: {
+            organization: provider.org,
+            ipAddress: provider.ip,   // FIX Schreibweise
+            os: userAgent.osvendor,
+            osName: userAgent.os,
+            osVersion: userAgent.osmodel,
+            osType: userAgent.device,
+            browser: userAgent.browser,
+          },
+          notice:
+            "Falls du das selbst warst, kannst du das Gerät jetzt zu deiner Liste hinzufügen und den Zugriff freigeben. Du wirst dann automatisch in dein Konto weitergeleitet.",
+          authorizeUrl: `${url.origin}/redirect?reason=device-authorization&token=${jwtToken}`, // FIX hostname
+          username,
+          sendReason:
+            `weil sich jemand bei ${subdomain}.i-planner.cloud angemeldet hat. Wenn du die Anmeldung durchgeführt hast, kannst du diese Nachricht ignorieren.`,
+          indexUrl: "https://www.i-planner.de",
+          dataProtectionUrl: "https://www.i-planner.de/datenschutz",
+          imprintUrl: "https://www.i-planner.de/impressum",
         },
       });
-
-      sendMail(username, title, template.html);
 
       return {
         path: `/login/notice?reason=new-device-detected&username=${encodeURIComponent(
@@ -213,10 +288,8 @@ export default defineEventHandler(async (event) => {
       };
     }
   } catch (error) {
-    logError(error);
-
+    console.error(error);
     const response = getLoginErrorHandler(error.message, error.cause);
-
     throw createError({
       statusCode: 400,
       message: response.title,
@@ -224,82 +297,3 @@ export default defineEventHandler(async (event) => {
     });
   }
 });
-
-async function selectCurrentDevice(db, { cid, kid, device, os, browser }) {
-  const query = `
-    SELECT *
-    FROM users_devices
-    WHERE cid = $1 AND kid = $2
-    AND osvendor = $3 AND osmodel = $4 AND os = $5 AND device = $6 AND browser = $7
-    AND split_part(browserversion, '.', 1) = $8
-  `;
-
-  const params = [
-    cid,
-    kid,
-    device.vendor,
-    device.model,
-    os.name,
-    device.type,
-    browser.name,
-    browser.version.split(".")[0] || "unknown",
-  ];
-
-  const { rows } = await db.query(query, params);
-  return rows;
-}
-
-async function countUserDevices(db, cid, kid) {
-  const query = `
-    SELECT COUNT(*)::int AS count
-    FROM users_devices
-    WHERE cid = $1 AND kid = $2;
- `;
-
-  const {
-    rows: [{ count }],
-  } = await db.query(query, [cid, kid]);
-  return count;
-}
-
-async function renderVueComponent(componentName, props) {
-  // Komponente dynamisch importieren
-  const componentPath = `../../emails/${componentName}.vue`
-  const { default: Component } = await import(componentPath);
-  
-  // SSR App erstellen
-  const app = createSSRApp(Component, props)
-  
-  // Zu HTML String rendern
-  const html = await renderToString(app)
-  
-  // Vollständiges HTML Dokument erstellen
-  return `
-    <!DOCTYPE html>
-    <html lang="de">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            background-color: #f4f4f4; 
-          }
-          .email-container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background-color: white; 
-          }
-          /* Globale E-Mail Styles hier */
-        </style>
-      </head>
-      <body>
-        <div class="email-container">
-          ${html}
-        </div>
-      </body>
-    </html>
-  `
-}

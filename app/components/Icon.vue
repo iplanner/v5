@@ -36,7 +36,7 @@ const __class_icon = computed(() => {
   if (typeof props.color === 'string' && props.color.length) {
     classes.push(props.color);
   } else {
-    classes.push('text-gray-400', 'dark:text-gray-500');
+    classes.push('text-foreground-light', 'dark:text-gray-500');
   }
 
   // Center

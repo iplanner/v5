@@ -4,7 +4,7 @@ export default defineEventHandler(async event => {
   const { username, reason } = getQuery(event);
   const headers = getRequestHeaders(event);
 
-  const url = getRequestURL(event)
+  const url = getRequestURL(event);
   const { session } = event.context;
 
   event.$fetch("/logout");

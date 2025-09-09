@@ -24,7 +24,15 @@
     --color-primary-1000: oklch(23.18% 0.0626 256.38);
     --color-primary-1100: oklch(14.75% 0.0304 253.29);
 
-    --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+    --color-foreground : oklch(20.46% 0 0);
+    --color-foreground-light : oklch(43.86% 0 0);
+    --color-foreground-lighter : oklch(54.52% 0 0);
+
+    --font-sans-inter: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+    --font-sans-geist: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --font-sans: var(--font-sans-geist);
 
     --spacing-1200 : 1200px;
 
@@ -67,8 +75,6 @@ body {
   font-optical-sizing: auto;
   font-kerning: normal;
   font-variant-ligatures: contextual common-ligatures;
-  /* Optional Features per Family-Names: */
-  /* font-variant-alternates: styleset(open-digits); */
 }
 
 #App{

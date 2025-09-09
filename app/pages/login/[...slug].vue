@@ -6,6 +6,7 @@ definePageMeta({
   layout: 'login',
   requiresAuth: false,
 })
+
 useHead({
   title: () => 'Login',
 })
@@ -16,8 +17,8 @@ onBeforeRouteLeave((to, from, next) => {
 
 const formRef = useTemplateRef('formRef');
 
-const __class_text = computed(() => ['text-base text-center text-slate-500'])
-const __class_link = computed(() => ['hover:text-primary hover:underline transition cursor-pointer text-sm'])
+const __class_text = computed(() => ['text-center text-gray-500'])
+const __class_link = computed(() => ['text-sm hover:text-primary hover:underline transition cursor-pointer'])
 
 /** FETCH PAGE DATA */
 const __params = computed(() => route.query || null)
@@ -60,6 +61,8 @@ async function submit({ displays, values }) {
       method: 'post',
       body: { ...values }
     });
+
+    console.log('response',response);
 
     if (response?.path) {
       await navigateTo(response.path, { external: true });
@@ -137,7 +140,7 @@ async function onSelect(event) {
   <div class="w-[320px] mt-4" v-if="data == null || error"> ERROR</div>
   <div v-else class="w-95 md:w-100 text-center flex flex-col gap-2 mx-auto">
     <p v-if="data?.step" class="text-sm text-slate-400 mt-3 " v-html="data.step" />
-    <h1 class="text-3xl font-semibold text-gray-800 dark:text-slate-100" v-html="data?.title"></h1>
+    <h1 class="text-3xl font-bold text-gray-800 dark:text-slate-100" v-html="data?.title"></h1>
     <p :class="[__class_text]" v-html="data?.subtitle" />
     <Form v-if="data.fieldsets.length" v-model="data.fieldsets" :automation="data.automation" size="xLarge" :class="{ 'mt-4': data.submitLabel.length }" @on-submit="submit" ref="formRef">
       <template #footer="{ onSubmit }">

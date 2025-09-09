@@ -12,7 +12,6 @@ export default defineEventHandler( async event => {
             return sendRedirect(event, "/login", 302);
         }
            
-        
         const db = usePostgres();
 
         const res = await db`
@@ -32,7 +31,7 @@ export default defineEventHandler( async event => {
         await clearUserSession(event);
         console.log(`Logout : cookie ${config.session.name} cleared...`)
         
-        return sendRedirect(event, "/login/notice?reason=logged-out", 302)
+        return sendRedirect( event, "/login/notice?reason=logged-out", 302)
 
     } catch (error) {
 
