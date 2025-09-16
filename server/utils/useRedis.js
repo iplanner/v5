@@ -16,10 +16,6 @@ export default function useRedis(options = {}) {
     // rediss://user:password@host:6379
     client = createClient({
       url: REDIS_URL,
-      socket: {
-        // Bei Render fast immer TLS nötig:
-        tls: true,
-      },
       ...overrides,
     })
 
