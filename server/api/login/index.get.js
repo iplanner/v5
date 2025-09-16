@@ -2,7 +2,6 @@ export default defineEventHandler(async event => {
   
   const config = useRuntimeConfig(event);
   const { username, reason } = getQuery(event);
-  const headers = getRequestHeaders(event);
 
   const url = getRequestURL(event);
   const { session } = event.context;

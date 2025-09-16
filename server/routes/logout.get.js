@@ -8,7 +8,8 @@ export default defineEventHandler( async event => {
     try {
 
         if (!session){
-            console.warn('[logout] no session → redirect to /login')
+            console.warn('[logout] no session → redirect to /login');
+            await clearUserSession(event);
             return sendRedirect(event, "/login", 302);
         }
            

@@ -1,20 +1,21 @@
-import crypto from 'crypto';
+import crypto from "crypto";
 
 export function verifyCookie(signedValue) {
   const config = useRuntimeConfig();
-  const [value, signature] = signedValue.split("|");
-
-  if (!value || !signature) {
-    throw new Error("Ungültiger signierter Cookie");
+  if (!config.IP_COOKIE_SECRET) {
+    throw new Error("Missing IP_COOKIE_SECRET for cookie verification");
   }
 
-  const expectedSignature = crypto
+  const [value, signature] = String(signedValue || "").split("|");
+  if (!value || !signature) throw new Error("Invalid signed cookie format");
+
+  const expected = crypto
     .createHmac("sha256", config.IP_COOKIE_SECRET)
     .update(value)
     .digest("hex");
 
-  if (expectedSignature !== signature) {
-    throw new Error("Signatur ungültig oder Cookie wurde manipuliert");
+  if (signature !== expected) {
+    throw new Error("Invalid cookie signature");
   }
 
   return value;

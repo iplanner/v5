@@ -1,5 +1,4 @@
 <script setup>
-
 const route = useRoute();
 
 definePageMeta({
@@ -29,13 +28,14 @@ if (import.meta.client) {
   console.log('data', data.value);
 }
 if (error.value) {
-  if (import.meta.client) {
-    console.log('data', error.value.data);
-  }
-  //await navigateTo('/login/error')
-}
 
-const username = route.query.username ?? '';
+  console.log('ERROR.DATA', error.value.data);
+
+  await navigateTo({
+    path: '/login/error',
+    query: error.value.data.data.params ?? {}
+  })
+}
 
 //const showLoginButton = false;
 
@@ -69,6 +69,8 @@ async function submit({ displays, values }) {
     }
 
   } catch (error) {
+
+    console.log('error',error);
 
     if (error.data) {
       Object.assign(dialog, error.data.data)
@@ -131,29 +133,26 @@ async function onSelect(event) {
   }
 }
 
-
-
-
 </script>
 
 <template>
-  <div class="w-[320px] mt-4" v-if="data == null || error"> ERROR</div>
-  <div v-else class="w-95 md:w-100 text-center flex flex-col gap-2 mx-auto">
+  <div class="w-95 md:w-140 mt-4" v-if="data == null || error"> ERROR</div>
+  <div v-else class="w-95 md:w-140 text-center flex flex-col gap-2 mx-auto">
     <p v-if="data?.step" class="text-sm text-slate-400 mt-3 " v-html="data.step" />
-    <h1 class="text-3xl font-bold text-gray-800 dark:text-slate-100" v-html="data?.title"></h1>
-    <p :class="[__class_text]" v-html="data?.subtitle" />
-    <Form v-if="data.fieldsets.length" v-model="data.fieldsets" :automation="data.automation" size="xLarge" :class="{ 'mt-4': data.submitLabel.length }" @on-submit="submit" ref="formRef">
+    <h1 class="text-4xl font-bold text-gray-800 dark:text-slate-100" v-html="data?.title"></h1>
+    <p :class="[__class_text,'md:w-100 mx-auto mt-2']" v-html="data?.subtitle" />
+    <div v-if="data.qr" class="flex items-center justify-center mt-1" v-html="data.qr"></div>
+    <Form v-if="data.fieldsets.length" v-model="data.fieldsets" :automation="data.automation" size="xLarge" class="md:w-100 mx-auto" :class="{ 'mt-4': data.submitLabel.length }" @on-submit="submit" ref="formRef">
       <template #footer="{ onSubmit }">
         <Button v-if="data.submitLabel.length" block primary type="submit" size="xLarge" @click.prevent="onSubmit()" :class="{ 'mt-4': data.fieldsets?.length }">
-          {{ data.submitLabel }}
-          <!-- <WheelTransition :duration="200">
+          <WheelTransition :duration="200">
             <div v-if="!isLoading">{{ data.submitLabel }}</div>
             <Loader v-else :size="24"/>
-          </WheelTransition> -->
+          </WheelTransition>
         </Button>
       </template>
     </Form>
-    <NuxtLink v-if="!data.fieldsets.length && data.submitLabel.length" :to="data.navigateTo[1]" class="mt-4">
+    <NuxtLink v-if="!data.fieldsets.length && data.submitLabel.length" :to="data.navigateTo[1]" class="mt-4 md:w-100 mx-auto">
       <Button block primary type="submit" size="xLarge">{{ data.submitLabel }}</Button>
     </NuxtLink>
     <p v-if="!isLoading && data.navigateTo?.length" class="flex items-center justify-center gap-2">
@@ -167,8 +166,8 @@ async function onSelect(event) {
         </Countdown>
       </p>
     </div>
-    <!--<ClientOnly>
+    <ClientOnly>
       <Dialog v-model:show="dialog.show" v-bind="dialog" @on-select="onSelect"></Dialog>
-    </ClientOnly> -->
+    </ClientOnly>
   </div>
 </template>

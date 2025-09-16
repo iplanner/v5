@@ -88,14 +88,28 @@ const LOGIN_ERRORS = {
     ]
   },
 
+  TFA_CODE_EXPIRED_ERROR: {
+    title: "Achtung, ein Fehler ist aufgetreten!",
+    body: "Der eingetragene Code ist bereits abgelaufen. Bitte kehre zum Login zurück und .",
+    buttons: [
+      { action: "resend", value: "/api/login/resend", display: "Bestätigungscode anfordern" },
+      { value: "", display: "Abbrechen" }
+    ]
+  },
+
   PASSWORD_NOT_EQUAL: {
     title: "Achtung Fehler",
     body: "Das neue Passwort und die Bestätigung des Passworts müssen identisch sein. Bitte überprüfe deine Eingabe und versuche es erneut.",
     buttons: [{ value: "", display: "OK" }]
-  }
+  },
+
+  ERROR_PAGE: ({ params } = {}) => ({
+    params
+  }),
 }
 
 export function getLoginErrorHandler(code, context = {}, overrides = {}) {
+
   const error = LOGIN_ERRORS[code] || {
     title: "Ein Fehler ist aufgetreten!",
     body: "Bitte versuche es später erneut.",

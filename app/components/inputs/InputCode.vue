@@ -92,13 +92,9 @@ watchEffect(() => {
     }
 });
 
-const __class_root = computed(() => {
-
-    return [
+const __class_root = computed(() => [
         `ip-input-group relative flex items-center gap-2`,
-    ];
-
-});
+    ]);
 
 const __class_label = computed(() => {
 
@@ -177,38 +173,46 @@ function onKeyDown(event, index) {
     emit('onKeyDown', _getEmitParams(originalEvent))
 }
 
-function onInput(event, index) {
+async function onInput(event, index) {
+  if (isPasted) return;
 
-    if (isPasted) return;
+  const { originalEvent, value } = event;
 
-    const { originalEvent, value } = event;
+  // Wert für dieses Feld aktualisieren (keine Leerzeichen am Rand)
+  items.value[index] = (value ?? '').trim();
 
-    if (!['Tab', 'ArrowRight', 'ArrowLeft'].includes(originalEvent.key) && value.trim().length) {
-        const nextIndex = Math.min(index + 1, items.value.length - 1);
-        itemRef.value[nextIndex]?.inputRef.focus();
-    }
+  // Cursor-Navigation
+  if (!['Tab', 'ArrowRight', 'ArrowLeft'].includes(originalEvent.key) && items.value[index].length) {
+    const nextIndex = Math.min(index + 1, items.value.length - 1);
+    itemRef.value[nextIndex]?.inputRef?.focus();
+  }
+  if (originalEvent.key === 'Backspace' && !items.value[index].length) {
+    const previousIndex = Math.max(index - 1, 0);
+    itemRef.value[previousIndex]?.inputRef?.focus();
+  }
 
-    if (originalEvent.key === 'Backspace' && !value.trim().length) {
-        const previousIndex = Math.max(index - 1, 0);
-        itemRef.value[previousIndex]?.inputRef.focus();
-    }
+  // Gesamte Eingabe als String zusammensetzen
+  const joined = items.value.map(ch => ch ?? '').join('');
 
-    items.value[index] = value.trim();
+  // Wenn nur Ziffern erlaubt sind, validieren – aber STRING behalten!
+  if (props.pattern === 'digits' || props.onlyDigits) {
+    // optional: unsaubere Zeichen rausfiltern
+    const digitsOnly = joined.replace(/\D+/g, '');
+    // Achtung: NICHT parseInt(), sonst gehen führende Nullen verloren
+    model.value = digitsOnly;
+  } else if (Array.isArray(model.value)) {
+    model.value = [...items.value];
+  } else {
+    // Standard: als String
+    model.value = joined;
+  }
 
-    if (typeof model.value === 'number' || props.pattern) {
-        model.value = parseInt(items.value.join(''), 10)
-    } else if (typeof model.value === 'string') {
-        ;
-        model.value = items.value.join('');
-    } else if (Array.isArray(model.value)) {
-        model.value = [...items.value];
-    }
+  isPasted = false;
+  await nextTick();
 
-    isPasted = false;
-
-    emit('onInput', _getEmitParams(originalEvent))
-    emit('onValueChanged', _getEmitParams(originalEvent))
-
+  const payload = _getEmitParams(originalEvent);
+  emit('onInput', payload);
+  emit('onValueChanged', payload);
 }
 
 function onKeyUp(event) {

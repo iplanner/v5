@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import jwt from "jsonwebtoken";
+import crypto from 'node:crypto'
 
 export default defineEventHandler(async (event) => {
   
@@ -9,7 +10,9 @@ export default defineEventHandler(async (event) => {
 
   let { username, password, subdomain = "" } = await readBody(event);
   username = String(username || "").trim();
-
+  password = String(password || "").trim();
+  subdomain = String(subdomain || "").trim();
+ 
   if (!subdomain) {
     const host = headers["x-forwarded-host"] || headers.host || "";
     const bareHost = host.split(":")[0];
@@ -21,109 +24,82 @@ export default defineEventHandler(async (event) => {
     
     const db = usePostgres();
 
-    // 1) User laden
+    // 1) User Daten (case-insensitive)
     const [user] = await db`
       SELECT *
       FROM users
-      WHERE username = ${username}
+      WHERE lower(username) = lower(${username})
       ORDER BY id DESC
       LIMIT 1
     `;
-    if (!user) {
-      throw new Error("USER_NOT_FOUND");
-    }
+    if (!user) throw new Error("USER_NOT_FOUND");
 
-    const { id : uid, kid, guid } = user;
-
+    
+    // 2) Organisationen des Users
     const organizations = await db`
-        SELECT 
-          uo.oid,
-          uo.role,
-          uo.start_url,
-          o.cid,
-          o.subdomain,
-          o.name
-        FROM users_organizations uo
-        INNER JOIN organizations o ON uo.oid = o.id
-        WHERE uo.uid = ${user.id}
+        SELECT
+          o.oid,
+          o.uid,
+          o.role,
+          o.start_url,
+          org.cid,
+          org.subdomain,
+          org.name
+        FROM organization_users AS o
+        INNER JOIN organizations AS org ON org.id = o.oid
+        WHERE o.uid = ${user.id}
       `;
+    if (!organizations.length) throw new Error("NO_ORGANIZATION_FOUND");
 
-    if (!organizations.length) {
-      throw new Error("NO_ORGANIZATION_FOUND");
-    }
-  
+    // 3) Passwortprüfung
+    const isValid = await verifyPassword(user.password, password);
+    if (!isValid) throw new Error(`WRONG_PASSWORD`, { cause: { username } });
 
-    // 2) Passwort prüfen ODER One-Time-Login via Prozess-Cookie
-    let isValid = false;
+    // 4) Two-Factor-Auth
+    if(user.tfa){
 
-    if (password === config.IP_PROCESS_ID_COOKIE) {
-      const signedCookie = getCookie(event, config.IP_PROCESS_ID_COOKIE);
-      const processId = signedCookie ? verifyCookie(signedCookie) : 0;
+      // create ProcessId
+      const redis = useRedis();
+      const processId = crypto.randomUUID?.() ?? crypto.randomBytes(16).toString("hex");
+      const expiredIn = 15 * 60; // 15 Min
 
-      if (!processId) {
-        throw new Error(
-          `Kein gültiges Cookie mit processId ${processId} gefunden - /login/post`
-        );
-      }
+      const payload = {
+        uid: user.id,
+        kid: user.kid,
+        username,
+        subdomain,
+        code : Math.floor( Math.random() * 900000) + 100000
+      };
 
-      const [form] = await db`
-        SELECT data
-        FROM users_login_process
-        WHERE id = ${processId}
-      `;
-      const processData = form?.data || {};
+      const ok = await redis.set(`login:tfa:${processId}`,
+        JSON.stringify(payload),
+        {
+          EX: expiredIn, 
+        }
+      );
+      if (ok !== 'OK') throw new Error('Could not create login processId')
 
-      if (
-        Number(processData.kid) === Number(kid) &&
-        String(processData.email).trim() === username &&
-        String(processData.subdomain).trim() === subdomain
-      ) {
-        isValid = true;
+      const signed = signCookie(String(processId));
+      setCookie(event, config.IP_PROCESS_ID_COOKIE, signed, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: expiredIn 
+      });
 
-        await db`DELETE FROM users_login_process WHERE id = ${processId}`;
-        deleteCookie(event, config.IP_PROCESS_ID_COOKIE);
-      }
-    }
+      return { path: `/login/tfa?username=${encodeURIComponent(username).replace('%40','@')}` }
 
-    if (!isValid) {
-      isValid = await verifyPassword(user.password, password);
-    }
-    if (!isValid) {
-      throw new Error(`WRONG_PASSWORD`, { cause: { username } });
     }
 
-    // 3) Geräteprüfung
-    const userAgent = useUserAgent(event); // muss osvendor, osmodel, os, device, browser, browserversion liefern
-    const provider = await useIPInfo(event); // ip, city, region, country, loc, org, postal, timezone
+    // 4) Geräteprüfung
 
-    console.log('3. userAgent', userAgent);
-    console.log('3. provider', provider);
-
-    const deviceRows = await db`
-      SELECT *
-      FROM users_devices
-      WHERE kid = ${kid}
-        AND osvendor = ${userAgent.osvendor}
-        AND osmodel = ${userAgent.osmodel}
-        AND os = ${userAgent.os}
-        AND device = ${userAgent.device}
-        AND browser = ${userAgent.browser}
-        AND split_part(browserversion, '.', 1) = ${String(userAgent.browserversion).split(".")[0] || "unknown"}
-    `;
-
-     console.log('3. deviceRows', deviceRows);
-
-    const [{ count: userDeviceCount }] = await db`
-      SELECT COUNT(*)::int AS count
-      FROM users_devices
-      WHERE kid = ${kid}
-    `;
-
-    console.log('3. userDeviceCount', userDeviceCount);
-
-    if (deviceRows.length > 0 || userDeviceCount === 0) {
+    const { userAgent, provider, majorBrowserVersion } = await getRequestContext(event);
+    const { isKnownDevice, deviceCount } = await checkUserDevice(db, user, userAgent, majorBrowserVersion);
+    
+    if (isKnownDevice || deviceCount === 0) {
       // Gerät ist bekannt ODER es ist das erstes Gerät in der Tabelle
       if (user.tfa) {
+        
         const code = Math.floor(Math.random() * 900000) + 100000;
         await useMessageBird({ mobile: user.tfa_mobile_number, code });
 
@@ -132,13 +108,14 @@ export default defineEventHandler(async (event) => {
             username
           ).replace("%40", "@")}`,
         };
+
       } else {
         // Sessions neu setzen
-        if( userDeviceCount > 0){
-          await UsersSession.delete(kid);
+        if( deviceCount > 0){
+          await UsersSession.delete(user.kid);
         }
         
-        const inserted = await UsersSession.insert({
+        const insertedSession = await UsersSession.insert({
           kid,
           guid,
           osvendor: userAgent.osvendor,
@@ -158,14 +135,30 @@ export default defineEventHandler(async (event) => {
           iptimezone: provider.timezone,
         });
 
-         console.log('3. inserted',inserted);
+        console.log('3. INSERT TO USER SESSION', insertedSession );
 
-        if (!inserted) {
+        if (!insertedSession) {
           throw new Error(`INSERT_USER_SESSION_FAILED`);
         }
 
+        // insert 
+        if( deviceCount === 0){
+          
+         const [insertedDevice] = await db`
+            INSERT INTO users_devices (
+              kid, guid, osvendor, osmodel, os, osversion,
+              device, browser, browserversion
+            ) VALUES (
+              ${user.kid}, ${user.guid}, ${userAgent.osvendor}, ${userAgent.osmodel}, ${userAgent.os}, ${userAgent.osversion},
+              ${userAgent.device}, ${userAgent.browser}, ${userAgent.browserversion}
+            )
+            RETURNING *
+          `
+
+        }
+
         // Geräte auf max. 3 trimmen
-        if (userDeviceCount > 3) {
+        if (deviceCount > 3) {
           const deleted = await db`
             DELETE FROM users_devices
             WHERE ctid IN (
@@ -184,31 +177,33 @@ export default defineEventHandler(async (event) => {
           }
         }
 
+        // Session setzten 
         await replaceUserSession(
           event,
           { user: { uid, kid, guid, organizations : organizations.map( o => ({ oid : o.oid, cid : o.cid})) } },
           { maxAge: user.sessiontimeout }
         );
 
-        const { send } = useSocketServer(guid);
-        send({
-          action: "SESSION_LOGOUT",
-          payload: {
-            show: true,
-            title: "Sitzung beendet!",
-            body: "Du hast dich auf einem anderen Gerät angemeldet. Aus Sicherheitsgründen wurde deine Sitzung auf diesem Gerät beendet.",
-            error: true,
-            closeOnOutsideClick: false,
-            buttons: [{ value: "/login", display: "Zurück zum Login" }],
-          },
-        });
+        const { send, hasActiveConnections } = useSocketServer(guid);
 
+        if(hasActiveConnections){
 
+          send({
+            action: "SESSION_LOGOUT",
+            payload: {
+              show: true,
+              title: "Sitzung beendet!",
+              body: "Du hast dich auf einem anderen Gerät angemeldet. Aus Sicherheitsgründen wurde deine Sitzung auf diesem Gerät beendet.",
+              error: true,
+              closeOnOutsideClick: false,
+              buttons: [{ value: "/login", display: "Zurück zum Login" }],
+            },
+          });
+
+        }
+
+      
         // Redirect to....
-
-        const u = await getUserSession(event) ;
-        console.log( 'user', JSON.stringify(u, null, 2))
-        console.log( 'subdomain', subdomain)
 
         if(subdomain.length && subdomain != 'www'){
 
@@ -235,6 +230,7 @@ export default defineEventHandler(async (event) => {
 
 
     } else {
+
       // Unbekanntes Gerät → E-Mail zur Freigabe
       if (!config.IP_JWT_SECRET) {
         console.warn("IP_JWT_SECRET is missing!");

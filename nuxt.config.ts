@@ -8,10 +8,6 @@ export default defineNuxtConfig({
     '@nuxt/image', 
     'nuxt-auth-utils'
   ],
-  image: {
-    provider: 'ipx', // built-in, kein sharp nötig
-    // oder: provider: 'squoosh'
-  },
   css: [
     '~/assets/css/main.css'
   ],
@@ -30,7 +26,6 @@ export default defineNuxtConfig({
     }
   ],
   runtimeConfig: {
-
 
     IP_PROCESS_ID_COOKIE: process.env.IP_PROCESS_ID_COOKIE,
     IP_COOKIE_SECRET:process.env.IP_PROCESS_ID_COOKIE,
@@ -53,13 +48,16 @@ export default defineNuxtConfig({
     MESSAGE_BIRD_API_URL : process.env.MESSAGE_BIRD_API_URL,
     MESSAGE_BIRD_API_KEY : process.env.MESSAGE_BIRD_API_KEY,
 
+    REDIS_URL : process.env.REDIS_URL,
+
+    EE_API_URL : process.env.EE_API_URL,
+    EE_API_TOKEN : process.env.EE_API_TOKEN,
+
     session: {
       name: 'iplanner-uid',
       password: process.env.NUXT_SESSION_PASSWORD as string,
       cookie: { secure: process.env.NODE_ENV === 'production' }
     },
-
-    // Public Keys (falls nötig)
     public: {
     }
   },
@@ -77,14 +75,13 @@ export default defineNuxtConfig({
     imports : {
       dirs : [
         'shared',
-        'server/models/**',
-        'server/modules',
+        'server/models/**'
       ]
     },
   },
   vite: {
     plugins: [
-      tailwindcss(),
+      tailwindcss()
     ],
   },
 })

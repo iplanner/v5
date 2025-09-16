@@ -8,7 +8,6 @@ export default defineEventHandler(async (event) => {
     "/api/webform", 
     "/logout",
     "/download",
-    "/iframe"
   ];
 
   
@@ -29,9 +28,7 @@ export default defineEventHandler(async (event) => {
     const [session] = await db`
       SELECT *
       FROM users_session
-      WHERE
-        cid            = ${user.cid}
-        AND kid        = ${user.kid}
+      WHERE kid        = ${user.kid}
         AND osvendor   = ${osvendor}
         AND os         = ${os}
         AND osversion  = ${osversion}
@@ -40,7 +37,6 @@ export default defineEventHandler(async (event) => {
         AND browserversion = ${browserversion}
       LIMIT 1
     `
-
     console.log('session',session);
     event.context.session = session || null;
     

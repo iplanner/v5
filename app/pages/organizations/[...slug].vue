@@ -16,8 +16,6 @@ useHead({
 })
 
 const __params = computed(() => route.query || null)
-
-
 const { data, error } = await useFetch(`/api${route.path}`, {
   query: __params
 });
@@ -45,11 +43,54 @@ if (error.value) {
                <div class="text-sm text-foreground font-semibold">Organisationen</div>
             </div>
             <div class="flex items-center text-sm">
-               B
+               <a href="/logout">Logout</a>
             </div>
           </div>
          
         </header>
-        <div>Row 2</div>
+        <div>
+           <div class="max-w-[1200px] px-4 lg:px-6 xl:px-10 mx-auto pt-12">
+              <div class="flex items-center justify-between gap-4">
+                  <h1 class="text-3xl">Deine Organisationen</h1>
+              </div>
+           </div>
+           <div class="max-w-[1200px] px-4 lg:px-6 xl:px-10 mx-auto pt-12">
+              <div class="first:pt-12 py-6 w-full flex flex-col gap-y-4">
+                  <div class="">a</div>
+                  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      <NuxtLink to="/organizations/8dc3f3a7e89a3814">
+                          <div class="overflow-hidden rounded-lg shadow-sm grow bg-gray-100 p-3 border border-gray-200 min-h-20 flex items-center gap-2">
+                              <IconBox>
+                                <Icon name="buildings" center></Icon>
+                              </IconBox>
+                              <div class="flex flex-col w-full">
+                                  <div class="text-sm text-gray-800">Muster GmbH</div>
+                                   <div class="flex items-center text-xs text-gray-400">
+                                    <div>Professional</div>
+                                    <div>•</div>
+                                    <div>1 Module</div>
+                                  </div>
+                              </div>
+                          </div>
+                      </NuxtLink>
+                       <NuxtLink to="/organizations/0103538dc2a7ffdd">
+                          <div class="overflow-hidden rounded-lg shadow-sm grow bg-gray-100 p-3 border border-gray-200 min-h-20 flex items-center gap-2">
+                              <IconBox>
+                                <Icon name="buildings" center></Icon>
+                              </IconBox>
+                              <div class="flex flex-col w-full">
+                                  <div class="text-sm text-gray-800">Other GmbH</div>
+                                  <div class="flex items-center text-xs text-gray-400">
+                                    <div>Professional</div>
+                                    <div>•</div>
+                                    <div>3 Module</div>
+                                  </div>
+                              </div>
+                          </div>
+                      </NuxtLink>
+                  </div>
+              </div>
+           </div> 
+        </div>
       </CssGrid>
 </template>
