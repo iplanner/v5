@@ -99,8 +99,8 @@ export default defineEventHandler( async event => {
       case "new-device-detected":
         return {
           step: "&nbsp;",
-          title: "Neues Gerät erkannt!",
-          subtitle: `Aus Sicherheitsgründen ist eine zusätzliche Autorisierung erforderlich. Wir haben eine E-Mail an <span style="color: var(--color-primary); white-space: nowrap;">${username}</span> gesendet. Bitte überprüfe das Postfach und folge den Anweisungen.`,
+          title: "Neues Gerät erkannt",
+          subtitle: `Zur Bestätigung deiner Anmeldung haben wir dir eine E-Mail an <span style="color: var(--color-primary); white-space: nowrap;">${username}</span> gesendet. Bitte öffne dein Postfach und folge den Anweisungen.`,
           fieldsets: [],
           submitTimeout: 0,
           submitLabel: "",

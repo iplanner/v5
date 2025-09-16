@@ -251,10 +251,7 @@ function onPaste(event) {
     <div :id="_id" :class="__class_root" ref="rootRef">
         <template v-for="(item, index) in items" :key="index">
             <slot name="before" :index="index"></slot>
-            <InputText v-model="items[index]" :name="`${name}[${index}]`" :size :readonly :disabled :maxlength="1"
-                :pattern text-align="center" :validationErrors @onFocus="onFocus" @onBlur="onBlur" @onKeyUp="onKeyUp"
-                @onKeyDown="onKeyDown($event, index)" @onInput="onInput($event, index)" @onPaste="onPaste"
-                class="flex-1" ref="itemRef" />
+            <InputText v-model="items[index]" :name="`${name}[${index}]`" :size :readonly :disabled :maxlength="1" :pattern inputmode="numeric" text-align="center" :validationErrors @onFocus="onFocus" @onBlur="onBlur" @onKeyUp="onKeyUp" @onKeyDown="onKeyDown($event, index)" @onInput="onInput($event, index)" @onPaste="onPaste" class="flex-1" imputmode="numeric" ref="itemRef" />
             <slot name="after" :index="index"></slot>
         </template>
         <label v-if="props.label" :for="_id" :class="__class_label">

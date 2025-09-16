@@ -1,5 +1,6 @@
 import { authenticator } from 'otplib'
 import jwt from "jsonwebtoken";
+import dayjs from "dayjs";
 
 export default defineEventHandler(async (event) => {
   
@@ -59,6 +60,8 @@ export default defineEventHandler(async (event) => {
         if (!organizations.length) throw new Error("NO_ORGANIZATION_FOUND");
 
         
+
+
         // 4.) Secret aus DB laden
         const rows = await db`
             SELECT id, tfa_secret
@@ -72,6 +75,8 @@ export default defineEventHandler(async (event) => {
 
         const secret = rows[0].tfa_secret
         // Code prüfen (±30s Toleranz)
+
+        console.log( String(code));
         const ok = authenticator.verify({ token: String(code), secret, window: 1 })
         if (!ok) {
             throw createError({ statusCode: 400, statusMessage: 'Code ungültig' })
@@ -113,6 +118,8 @@ export default defineEventHandler(async (event) => {
 
             }
 
+            deleteCookie(event, config.IP_PROCESS_ID_COOKIE, { path: '/' });
+
             if(subdomain && subdomain !== 'www'){
 
                 const { oid, role, start_url = "" } = organizations.find( o => o.subdomain === subdomain) ?? {};
@@ -140,7 +147,7 @@ export default defineEventHandler(async (event) => {
             await useSendgrid({
               to: username,
               templateId: "d-b1aa0d9e26074001bf2ff5bc9a1820a8",
-              templateData: {
+              dynamicTemplateData: {
                 title: "Anmeldeversuch mit einem neuen Gerät",
                 primaryColor: "#1a73e8",
                 text: `Am ${dayjs().format("DD.MM.YYYY")} um ${dayjs().format("HH:mm")} Uhr wurde versucht, sich mit einem neuen Gerät bei deinem Konto ${username} unter ${subdomain}.i-planner.cloud anzumelden. Aus Sicherheitsgründen haben wir den Zugriff blockiert.`,

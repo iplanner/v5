@@ -37,7 +37,6 @@ export default defineEventHandler(async (event) => {
         AND browserversion = ${browserversion}
       LIMIT 1
     `
-    console.log('session',session);
     event.context.session = session || null;
     
   } catch (error) {

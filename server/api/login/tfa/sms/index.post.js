@@ -190,7 +190,7 @@ export default defineEventHandler(async (event) => {
     await useSendgrid({
             to: username,
             templateId: "d-b1aa0d9e26074001bf2ff5bc9a1820a8",
-            templateData: {
+            dynamicTemplateData: {
               title: "Anmeldeversuch mit einem neuen Gerät",
               primaryColor: "#1a73e8",
               text: `Am ${dayjs().format("DD.MM.YYYY")} um ${dayjs().format(

@@ -142,7 +142,7 @@ async function onSelect(event) {
     <h1 class="text-4xl font-bold text-gray-800 dark:text-slate-100" v-html="data?.title"></h1>
     <p :class="[__class_text,'md:w-100 mx-auto mt-2']" v-html="data?.subtitle" />
     <div v-if="data.qr" class="flex items-center justify-center mt-1" v-html="data.qr"></div>
-    <Form v-if="data.fieldsets.length" v-model="data.fieldsets" :automation="data.automation" size="xLarge" class="md:w-100 mx-auto" :class="{ 'mt-4': data.submitLabel.length }" @on-submit="submit" ref="formRef">
+    <Form v-if="data.fieldsets.length" v-model="data.fieldsets" :automation="data.automation" size="xLarge" class="w-95 md:w-100 mx-auto" :class="{ 'mt-4': data.submitLabel.length }" @on-submit="submit" ref="formRef">
       <template #footer="{ onSubmit }">
         <Button v-if="data.submitLabel.length" block primary type="submit" size="xLarge" @click.prevent="onSubmit()" :class="{ 'mt-4': data.fieldsets?.length }">
           <WheelTransition :duration="200">
@@ -159,8 +159,8 @@ async function onSelect(event) {
       <Icon v-if="data.navigateTo[0]?.length" :name="data.navigateTo[0]" class="text-gray-500" />
       <NuxtLink :to="data.navigateTo[1]" :class="[__class_text, __class_link]">{{ data.navigateTo[2] }}</NuxtLink>
     </p>
-    <div v-if="!isLoading && data.resendText?.length" class="mb-4 text-center">
-      <p class="text-base md:text-lg text-center text-slate-500">{{ data.resendText[0] }} <span v-if="!resendTimeout" class="text-primary hover:text-primary transition hover:underline cursor-pointer" @click="resend()">{{ data.resendText[1] }}</span>
+    <div v-if="!isLoading && data.resendText?.length" class="mb-4 text-center md:w-100 mx-auto">
+      <p class=" text-center text-gray-500">{{ data.resendText[0] }} <span v-if="!resendTimeout" class="text-primary hover:text-primary transition hover:underline cursor-pointer" @click="resend()">{{ data.resendText[1] }}</span>
         <Countdown v-if="resendTimeout > 0" :time="resendTimeout" v-slot="{ minutes, seconds }" @on-end="onCountdownEnd">
           <span> In <span class="text-primary">{{ minutes }}:{{ (seconds < 10) ? `0${seconds}` : seconds }} {{ (minutes > 0) ? 'Minute': 'Sekunden' }}</span> kannst du eine erneute Zustellung anfordern!</span>
         </Countdown>

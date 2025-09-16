@@ -17,7 +17,7 @@ export default defineEventHandler( async event => {
 
         const res = await db`
             DELETE FROM users_session
-            WHERE cid = ${session.cid} AND kid = ${session.kid}
+            WHERE id = ${session.id}
             RETURNING id, guid
         `
         const killed = Array.isArray(res) ? res.length : 0

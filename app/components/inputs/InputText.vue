@@ -38,6 +38,8 @@ const props = defineProps({
             return (typeof value === 'string' && ['text', 'password', 'textarea'].includes(value))
         }
     },
+    /** The mode attribute for the input field */
+    inputmode: { type: String, default: "text" },
     /** The rows attribute for the input field only when of props.type textarea */
     rows: { type: Number, default: 3 },
     /** Whether the textareas height changed automatical when the size grows - only when of props.type textarea*/
@@ -337,7 +339,7 @@ defineExpose({
                 <slot name="prefix">{{ prefix }}</slot>
             </div>
             <input v-if="type !== 'textarea'" :id="_id" :class="__class_input" :type="_type" :name v-model.trim="model"
-                :placeholder :maxlength :minlength :readonly :disabled :autocomplete @click="onClick" @focus="onFocus"
+                :placeholder :maxlength :minlength :readonly :disabled :autocomplete :inputmode @click="onClick" @focus="onFocus"
                 @input="onInput" @blur="onBlur" @keypress="onKeyPress" @keydown="onKeyDown" @keyup="onKeyUp"
                 @paste="onPaste" ref="inputRef" />
             <textarea v-else :id="_id" :class="__class_input" :rows :name v-model.trim="model" :placeholder :maxlength
