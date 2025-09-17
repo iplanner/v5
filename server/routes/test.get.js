@@ -1,6 +1,15 @@
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
   try {
+
+
+    const { origin} = getRequestURL(event)
+
+    return origin;
+
+    const provider = await useIPInfo(event);
+
+    return provider;
     
     const db = usePostgres();
     const { send } = useSocketServer('d8b0622f-15c0-4c09-be65-c024d4fae680');

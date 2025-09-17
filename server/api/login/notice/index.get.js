@@ -1,6 +1,6 @@
 export default defineEventHandler( async event => {
 
-    const { reason, username} = getQuery(event);
+    const { reason, username } = getQuery(event);
 
     switch (reason) {
       

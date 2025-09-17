@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
 
   // Secret aus transientem Setup holen
   const redis = useRedis();
-  const cache = await redis.get(`tfa:google-setup:${userId}`)
+  const cache = await redis.get(`tfa:totp-setup:${userId}`)
   if (!cache) {
     throw createError({ statusCode: 400, statusMessage: 'Setup abgelaufen oder nicht gefunden' })
   }
@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
     UPDATE users
     SET
       tfa_secret   = ${secret},
-      tfa_provider = 'google',
+      tfa_provider = 'totp',
       updated_at   = NOW()
     WHERE id = ${userId}
     RETURNING id
@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Transienten Setup-Key entfernen
-  await redis.del(`tfa:google-setup:${userId}`)
+  await redis.del(`tfa:totp-setup:${userId}`)
 
   return { success: true }
 })

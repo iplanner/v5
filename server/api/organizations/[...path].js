@@ -1,8 +1,8 @@
 export default defineEventHandler(async (event) => {
   const routerParams = getRouterParams(event)
-  const parts = routerParams.params.split("/");
+  const path = routerParams.path.split("/");
 
   return {
-    parts
+    path
   }
 })

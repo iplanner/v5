@@ -171,3 +171,71 @@ export async function finalizeUserSession(db, {
     }
   })
 }
+
+export async function getStartUrl(db, user, subdomain) {
+  
+  const organizations = await db`
+    SELECT
+      o.oid,
+      o.uid,
+      o.role,
+      o.start_url,
+      org.cid,
+      org.subdomain,
+      org.name,
+      org.updated_at
+    FROM organization_users AS o
+    INNER JOIN organizations AS org ON org.id = o.oid
+    WHERE o.uid = ${user.id}
+  `
+  if (!organizations || organizations.length === 0) {
+    return { path: '/login/error?reason=organization-not-found' }
+  }
+
+  const current = (subdomain || '').trim().toLowerCase()
+
+  console.log('SUBDOMAIN',subdomain);
+
+  // 1) Subdomain angegeben → validieren & routen
+  if (current && current !== 'www') {
+    // Existiert Subdomain überhaupt?
+    const [subExists] = await db`
+      SELECT id
+      FROM organizations
+      WHERE LOWER(subdomain) = ${current}
+      LIMIT 1
+    `
+    if (!subExists) {
+      return { path: '/login/error?reason=subdomain-not-found' }
+    }
+
+    // Gehört der User zu dieser Subdomain?
+    const target = organizations.find((o) => String(o.subdomain || '').toLowerCase() === current)
+    if (!target) {
+      return { path: '/login/error?reason=subdomain-forbidden' }
+    }
+
+    const { oid, role, start_url = '' } = target
+    if (start_url) return { path: start_url }
+    if (role === 'admin' && oid) return { path: `/organizations/${oid}` }
+    return { path: `/organizations` }
+  }
+
+  // 2) Kein current (oder 'www') → Fallback: zuletzt geupdatete Org
+  const latest = organizations
+    .filter((o) => o && o.oid)
+    .sort((a, b) => {
+      const ta = a.updated_at ? new Date(a.updated_at).getTime() : 0
+      const tb = b.updated_at ? new Date(b.updated_at).getTime() : 0
+      return tb - ta
+    })[0]
+
+  if (latest) {
+    const { oid, role, start_url = '' } = latest
+    if (start_url) return { path: start_url }
+    if (role === 'admin' && oid) return { path: `/organizations/${oid}` }
+    return { path: `/organizations` }
+  }
+
+  return { path: '/login/error?reason=organization-not-found' }
+}

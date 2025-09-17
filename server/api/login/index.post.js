@@ -8,17 +8,11 @@ export default defineEventHandler(async (event) => {
   const headers = getRequestHeaders(event);
   const url = getRequestURL(event);
 
-  let { username, password, subdomain = "" } = await readBody(event);
-  username = String(username || "").trim();
-  password = String(password || "").trim();
-  subdomain = String(subdomain || "").trim();
+  let { username, password } = await readBody(event);
+    username = String(username || "").trim();
+    password = String(password || "").trim();
  
-  if (!subdomain) {
-    const host = headers["x-forwarded-host"] || headers.host || "";
-    const bareHost = host.split(":")[0];
-    const parts = bareHost.split(".");
-    subdomain = parts.length > 2 ? parts[0] : "";
-  }
+  const subdomain = useSubdomain(headers);
 
   try {
     
@@ -180,7 +174,7 @@ export default defineEventHandler(async (event) => {
         // Session setzten 
         await replaceUserSession(
           event,
-          { user: { uid, kid, guid, organizations : organizations.map( o => ({ oid : o.oid, cid : o.cid})) } },
+          { user: { uid, kid, guid } },
           { maxAge: user.sessiontimeout }
         );
 

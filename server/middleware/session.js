@@ -3,6 +3,7 @@ export default defineEventHandler(async (event) => {
   const { pathname } = getRequestURL(event);
 
   const allowedRoutes = [
+    "/api/account",
     "/api/app",
     "/api/webapp",
     "/api/webform", 

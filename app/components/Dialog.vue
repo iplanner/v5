@@ -126,6 +126,7 @@ defineExpose({
 </script>
 
 <template>
+  <ClientOnly>
     <Teleport :to="to">
       <div :id="_id" class="ip-dialog-box" v-if="isMounted">
         <motion.div
@@ -137,26 +138,19 @@ defineExpose({
           v-draggable 
           :style="_style"
         >
-       <slot>
-              <div class="flex flex-col gap-3 m-6">
-                <div class="text-xl font-semibold" v-if="title">{{title}}</div>
-                <Loader :show="loader" class="mt-2"/>
-                <div class="text-sm" :class="{'mb-6' : !buttons.length}" v-if="body" v-html="body"></div>
-                <div :class="[{ 'flex justify-around' : props.inline, 'flex-col' : !props.inline}]" v-if="buttons.length">
-                  <div class=" cursor-pointer"
-                    :class="[{ 'border-t border-white/20 py-3': !props.inline, 'py-2' : props.inline }, button.class]"
-                    v-for="(button, index) in buttons"
-                    :key="index"
-                    @click="onSelect(button)">
-                    {{button.display}}
-                  </div>
-                </div>
-              </div>
-            </slot>
-      </motion.div>
-     
-       </div>
-    </Teleport>  
+        <slot>
+          <div class="flex flex-col gap-3 m-6">
+            <div class="text-xl font-semibold" v-if="title">{{title}}</div>
+            <Loader :show="loader" class="mt-2"/>
+            <div class="text-sm" :class="{'mb-6' : !buttons.length}" v-if="body" v-html="body"></div>
+            <div :class="[{ 'flex justify-around' : props.inline, 'flex-col' : !props.inline}]" v-if="buttons.length">
+            <div class=" cursor-pointer" :class="[{ 'border-t border-white/20 py-3': !props.inline, 'py-2' : props.inline }, button.class]" v-for="(button, index) in buttons" :key="index" @click="onSelect(button)">{{button.display}}</div></div>
+          </div>
+        </slot>
+       </motion.div>
+      </div>
+    </Teleport> 
+  </ClientOnly>
 </template>
 
 <style lang="scss" scoped>

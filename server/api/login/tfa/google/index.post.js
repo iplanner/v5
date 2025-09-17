@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   
     const config = useRuntimeConfig(event);
     const { code } = await readBody(event) || {}
-    const url = getRequestURL(event)
+    const { origin} = getRequestURL(event)
 
     // todo ...fehlermeldungen umleiten auf fenster = Post request
 
@@ -14,13 +14,13 @@ export default defineEventHandler(async (event) => {
 
         // 1.) Cookie prüfen
         const signed = getCookie( event, config.IP_PROCESS_ID_COOKIE );
-        if (!signed) throw new Error("ERROR_PAGE", { cause: { params : { reason : 'expired-tfa-process'}} });
+        if (!signed) throw new Error("TFA_PROCESS_EXPIRED");
         const processId = verifyCookie(signed);
 
         const redis = useRedis();
         const key = `login:tfa:${processId}`;
         const json = await redis.get(key);
-        if (!json) throw new Error("ERROR_PAGE", { cause: { params : { reason : 'expired-tfa-process'}} });
+        if (!json) throw new Error("TFA_PROCESS_EXPIRED");
 
         const data = JSON.parse(json);
         const { uid, username, subdomain } = data;
@@ -31,7 +31,6 @@ export default defineEventHandler(async (event) => {
         }
 
        
-
         // 3.) User laden
         const db = usePostgres();
 
@@ -60,8 +59,6 @@ export default defineEventHandler(async (event) => {
         if (!organizations.length) throw new Error("NO_ORGANIZATION_FOUND");
 
         
-
-
         // 4.) Secret aus DB laden
         const rows = await db`
             SELECT id, tfa_secret
@@ -74,9 +71,6 @@ export default defineEventHandler(async (event) => {
         }
 
         const secret = rows[0].tfa_secret
-        // Code prüfen (±30s Toleranz)
-
-        console.log( String(code));
         const ok = authenticator.verify({ token: String(code), secret, window: 1 })
         if (!ok) {
             throw createError({ statusCode: 400, statusMessage: 'Code ungültig' })
@@ -96,7 +90,7 @@ export default defineEventHandler(async (event) => {
             }
 
             await replaceUserSession( event,
-                { user: { uid, kid : user.kid, guid : user.guid, organizations : organizations.map( o => ({ oid : o.oid, cid : o.cid})) } },
+                { user: { uid, kid : user.kid, guid : user.guid } },
                 { maxAge: user.sessiontimeout }
             );
 
@@ -120,25 +114,16 @@ export default defineEventHandler(async (event) => {
 
             deleteCookie(event, config.IP_PROCESS_ID_COOKIE, { path: '/' });
 
-            if(subdomain && subdomain !== 'www'){
-
-                const { oid, role, start_url = "" } = organizations.find( o => o.subdomain === subdomain) ?? {};
-
-                if(start_url) return { path: start_url }
-                if(role === 'admin') return { path: `/organizations/${oid}` }       
-                return { path: `/app` }
-
-            }
-
-            return { path: `/organizations` }
+            return await getStartUrl( db, user, subdomain);
 
         }else{
 
             const jwtToken = jwt.sign(
                 {
-                    kid : user.kid,
+                    uid : user.id,
                     guid : user.guid,
-                    payload: { device: userAgent.device, os: userAgent.os, browser: userAgent.browser },
+                    subdomain,
+                    payload: { userAgent, provider },
                 },
                 config.IP_JWT_SECRET,
                 { algorithm: "HS256", expiresIn: "1h" }
@@ -148,9 +133,9 @@ export default defineEventHandler(async (event) => {
               to: username,
               templateId: "d-b1aa0d9e26074001bf2ff5bc9a1820a8",
               dynamicTemplateData: {
-                title: "Anmeldeversuch mit einem neuen Gerät",
+                title: "Anmeldeversuch mit einem unbekannten Gerät",
                 primaryColor: "#1a73e8",
-                text: `Am ${dayjs().format("DD.MM.YYYY")} um ${dayjs().format("HH:mm")} Uhr wurde versucht, sich mit einem neuen Gerät bei deinem Konto ${username} unter ${subdomain}.i-planner.cloud anzumelden. Aus Sicherheitsgründen haben wir den Zugriff blockiert.`,
+                text: `Am ${dayjs().format("DD.MM.YYYY")} um ${dayjs().format("HH:mm")} Uhr wurde versucht, sich mit einem unbekannten Gerät bei deinem Konto ${username} unter ${origin} anzumelden. Aus Sicherheitsgründen haben wir den Zugriff blockiert.`,
                 provider: {
                   organization: provider.org,
                   ipAddress: provider.ip, // FIX Schreibweise
@@ -160,10 +145,10 @@ export default defineEventHandler(async (event) => {
                   osType: userAgent.device,
                   browser: userAgent.browser,
                 },
-                notice: "Falls du das selbst warst, kannst du das Gerät jetzt zu deiner Liste hinzufügen und den Zugriff freigeben. Du wirst dann automatisch in dein Konto weitergeleitet.",
-                authorizeUrl: `${url.origin}/redirect?reason=device-authorization&token=${jwtToken}`,
+                notice: "Falls du es selbst warst, kannst du das Gerät jetzt zu deiner Liste hinzufügen und den Zugriff freigeben. Du wirst dann automatisch in dein Konto weitergeleitet.",
+                authorizeUrl: `${origin}/login/redirect?reason=new-device-detected&token=${jwtToken}`,
                 username,
-                sendReason: `weil sich jemand bei ${subdomain}.i-planner.cloud angemeldet hat. Wenn du die Anmeldung durchgeführt hast, kannst du diese Nachricht ignorieren.`,
+                sendReason: `weil sich jemand bei ${origin} mit einem neuen Gerät angemeldet hat.`,
                 indexUrl: "https://www.i-planner.de",
                 dataProtectionUrl: "https://www.i-planner.de/datenschutz",
                 imprintUrl: "https://www.i-planner.de/impressum",

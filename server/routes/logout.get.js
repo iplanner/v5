@@ -32,7 +32,7 @@ export default defineEventHandler( async event => {
         await clearUserSession(event);
         console.log(`Logout : cookie ${config.session.name} cleared...`)
         
-        return sendRedirect( event, "/login/notice?reason=logged-out", 302)
+        return sendRedirect( event, "/login", 302)
 
     } catch (error) {
 

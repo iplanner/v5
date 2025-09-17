@@ -9,6 +9,7 @@ definePageMeta({
 useHead({
   title: () => 'Login',
 })
+
 onBeforeRouteLeave((to, from, next) => {
   console.log('onBeforeRouteLeave Login', to)
   next();
@@ -28,26 +29,23 @@ if (import.meta.client) {
   console.log('data', data.value);
 }
 if (error.value) {
+    console.log('ERROR.DATA', error.value.data);
+    
+    const params = error.value?.data?.data?.params;
 
-  console.log('ERROR.DATA', error.value.data);
-
-  await navigateTo({
-    path: '/login/error',
-    query: error.value.data.data.params ?? {}
-  })
+    if (params && Object.keys(params).length > 0) {
+    await navigateTo({ path: '/login/error', query: params })
+    } else {
+    await navigateTo('/login/error')
+    }
 }
 
-//const showLoginButton = false;
-
 /** FORM SUBMIT */
-
 const isLoading = ref(false);
-
 async function submit({ displays, values }) {
 
   isLoading.value = true;
-
-  await new Promise(resolve => setTimeout(resolve, data.value.submitTimeout));
+  await delay(data.value.submitTimeout);
 
   console.log('submit', displays, values);
 
@@ -65,7 +63,7 @@ async function submit({ displays, values }) {
     console.log('response',response);
 
     if (response?.path) {
-      await navigateTo(response.path, { external: true });
+      await navigateTo(response.path);
     }
 
   } catch (error) {
@@ -73,7 +71,7 @@ async function submit({ displays, values }) {
     console.log('error',error);
 
     if (error.data) {
-      Object.assign(dialog, error.data.data)
+      Object.assign( dialog, error.data.data)
     }
 
   } finally {
@@ -85,7 +83,6 @@ async function submit({ displays, values }) {
 /** RESEND */
 const resendTimeout = ref(60000);
 const resendAttempts = ref(1)
-
 async function resend(url = "") {
 
   resendAttempts.value++;
@@ -129,7 +126,7 @@ const dialog = reactive({
 
 async function onSelect(event) {
   if (event.value.length) {
-    await navigateTo(event.value, { external: true });
+    await navigateTo(event.value);
   }
 }
 
@@ -166,8 +163,6 @@ async function onSelect(event) {
         </Countdown>
       </p>
     </div>
-    <ClientOnly>
-      <Dialog v-model:show="dialog.show" v-bind="dialog" @on-select="onSelect"></Dialog>
-    </ClientOnly>
+    <Dialog v-model:show="dialog.show" v-bind="dialog" @on-select="onSelect"></Dialog>
   </div>
 </template>

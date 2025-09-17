@@ -26,7 +26,13 @@ if (error.value) {
   if (import.meta.client) {
     console.log('data', error.value.data);
   }
-  //await navigateTo('/login/error')
+    const params = error.value?.data?.data?.params;
+
+    if (params && Object.keys(params).length > 0) {
+    await navigateTo({ path: '/login/error', query: params })
+    } else {
+    await navigateTo('/login/error')
+    }
 }
 
 
@@ -56,7 +62,7 @@ if (error.value) {
            </div>
            <div class="max-w-[1200px] px-4 lg:px-6 xl:px-10 mx-auto pt-12">
               <div class="first:pt-12 py-6 w-full flex flex-col gap-y-4">
-                  <div class="">a</div>
+                  <NuxtLink to="/account" class="underline"> → Account Settings</NuxtLink>
                   <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       <NuxtLink to="/organizations/8dc3f3a7e89a3814">
                           <div class="overflow-hidden rounded-lg shadow-sm grow bg-gray-100 p-3 border border-gray-200 min-h-20 flex items-center gap-2">

@@ -136,7 +136,7 @@ export default defineEventHandler(async event => {
 
     }
 
-    if(user.tfa_provider === 'google'){
+    if(user.tfa_provider === 'totp'){
        
         if (!user.tfa_secret) {
             // 1) Neues Secret erzeugen auslagern wird später in der orgaverwwaltung durchgeführt ...
@@ -146,7 +146,7 @@ export default defineEventHandler(async event => {
             const otpauth = authenticator.keyuri(label, issuer, secret)
             const qr = await QRCode.toString(otpauth, { type: 'svg', width: 200 });
             
-            await redis.set( `tfa:google-setup:${user.id}`, JSON.stringify({ secret, createdAt: Date.now() }),{ EX: 15 * 60 });
+            await redis.set( `tfa:totp-setup:${user.id}`, JSON.stringify({ secret, createdAt: Date.now() }),{ EX: 15 * 60 });
 
             return {
                 step: "&nbsp;",
@@ -216,7 +216,7 @@ export default defineEventHandler(async event => {
             return {
                 step: "&nbsp;",
                 title: "Zwei-Faktor-Authentifizierung",
-                subtitle: `Öffne bitte die Google Authenticator-App und gib den aktuellen 6-stelligen Sicherheitscode für <span style="color: var(--color-primary); white-space: nowrap;">i-planner.app: ${user.username}</span> ein.`,
+                subtitle: `Öffne bitte die Authenticator-App und gib den aktuellen 6-stelligen Sicherheitscode für <span style="color: var(--color-primary); white-space: nowrap;">i-planner.app: ${user.username}</span> ein.`,
                 fieldsets: [
                     {
                         id: 1,

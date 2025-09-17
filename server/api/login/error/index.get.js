@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+  
   const { reason } = getQuery(event)
 
   let title = "Fehler"
@@ -13,7 +14,16 @@ export default defineEventHandler(async (event) => {
         title = "Fehler",
         subtitle = "Für die Zwei-Faktor-Authentifizierung konnte kein User gefunden werden. Bitte kehre zum Login zurück und versuche es erneut."
       break;
-
+      case "organization-not-found":
+        title = "Fehler",
+        subtitle = "Es wurde keine Organisation gefunden. Bitte kehre zum Login zurück und versuche es erneut."
+      break;
+      case "subdomain-not-found":
+        title = "Fehler",
+        subtitle = "Die Subdomain wurde nicht gefunden. Bitte kehre zum Login zurück und versuche es erneut."
+      case "subdomain-forbidden":
+        title = "Fehler",
+        subtitle = "Die Subdomain kann nicht aufgerufen werden. Bitte kehre zum Login zurück und versuche es erneut."
   }
 
   return {

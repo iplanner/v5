@@ -97,6 +97,15 @@ const LOGIN_ERRORS = {
     ]
   },
 
+   TFA_PROCESS_EXPIRED: {
+    title: "Zwei-Faktor-Code abgelaufen!",
+    body: "Der angeforderte Zwei-Faktor-Code ist älter als 15 Minuten. Danach wird er automatisch ungültig und die Sitzung wird beendet. Bitte kehre zum Login zurück und versuche es erneut.",
+    buttons: [
+      { value: `/login`, display: "Zurück zum Login" },
+      { value: "", display: "Abbrechen" }
+    ]
+  },
+
   PASSWORD_NOT_EQUAL: {
     title: "Achtung Fehler",
     body: "Das neue Passwort und die Bestätigung des Passworts müssen identisch sein. Bitte überprüfe deine Eingabe und versuche es erneut.",

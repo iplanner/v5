@@ -1,11 +1,8 @@
 export default defineEventHandler(async event => {
   
-  const config = useRuntimeConfig(event);
   const { username, reason } = getQuery(event);
-
   const url = getRequestURL(event);
-  const { session } = event.context;
-
+  
   event.$fetch("/logout");
 
   const res = {
@@ -67,24 +64,6 @@ export default defineEventHandler(async event => {
             showIf: [],
             visible: true,
           },
-          {
-            id: 13,
-            x: 0,
-            y: 2,
-            w: 1,
-            h: 1,
-            input: "text",
-            props: {
-              label: "",
-              name : 'subdomain',
-              value : url.hostname.split(".")[0] || "",
-              validation: [],
-              validationMessages: {},
-              validationErrors: [],
-            },
-            visible: false,
-            isHiddenField : true
-          }
               ],
               showIf: [],
               math: [],
