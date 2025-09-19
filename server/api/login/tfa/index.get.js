@@ -1,6 +1,6 @@
+// server/api/login/tfa/index.get => pages/login/[...slug]
 import dayjs from "dayjs";
-import { authenticator } from 'otplib'
-import QRCode from 'qrcode'
+
 export default defineEventHandler(async event => {
   
   const config = useRuntimeConfig(event);
@@ -33,7 +33,7 @@ export default defineEventHandler(async event => {
     if (!user) throw new Error("ERROR_PAGE", { cause: { params : { reason : 'user-not-found'}} });
 
 
-    // 2.) Provider laden 
+    // 2.) Provider laden
     if(user.tfa_provider === 'sms'){ 
 
         let to = username;
@@ -69,7 +69,6 @@ export default defineEventHandler(async event => {
             data.lastSentAt = Date.now();
             await redis.set(key, JSON.stringify(data), { EX: 15 * 60 });
         }
-
 
         return {
             step: "&nbsp;",
@@ -135,154 +134,73 @@ export default defineEventHandler(async event => {
         }
 
     }
-
+    
     if(user.tfa_provider === 'totp'){
        
-        if (!user.tfa_secret) {
-            // 1) Neues Secret erzeugen auslagern wird später in der orgaverwwaltung durchgeführt ...
-            const secret = authenticator.generateSecret();
-            const issuer = 'i-planner.app'
-            const label = `${user.username}`
-            const otpauth = authenticator.keyuri(label, issuer, secret)
-            const qr = await QRCode.toString(otpauth, { type: 'svg', width: 200 });
-            
-            await redis.set( `tfa:totp-setup:${user.id}`, JSON.stringify({ secret, createdAt: Date.now() }),{ EX: 15 * 60 });
-
-            return {
-                step: "&nbsp;",
-                title: "Zwei-Faktor einrichten",
-                subtitle: `Scanne den QR-Code mit der Google Authenticator-App und gib anschließend den 6-stelligen Code ein.`,
-                qr,
-                fieldsets: [
-                    {
-                        id: 1,
-                        label: "",
-                        name: "login",
-                        toggled: false,
-                        multiple: false,
-                        padding: [0, 4],
-                        columns: 1,
-                        breakpoints: {},
-                        fields: [
-                            {
-                                id: 11,
-                                x: 0,
-                                y: 0,
-                                w: 1,
-                                h: 1,
-                                input: "code",
-                                props: {
-                                    label: "Code",
-                                    placeholder: "",
-                                    name: "code",
-                                    value: "",
-                                    validation: [],
-                                    validationMessages: {},
-                                    validationErrors: [],
-                                },
-                                showIf: [],
-                                visible: true,
-                            },
-                            {
-                                id: 12,
-                                x: 0,
-                                y: 2,
-                                w: 1,
-                                h: 1,
-                                input: "text",
-                                props: {
-                                    label: "",
-                                    name : 'userId',
-                                    value : user.id,
-                                    validation: [],
-                                    validationMessages: {},
-                                    validationErrors: [],
-                                },
-                                visible: false,
-                                isHiddenField : true
-                            }
-                        ],
-                        showIf: [],
-                        math: [],
-                    }
-                ],
-                submitLabel: "Anmelden",
-                submitTimeout: 1000,
-                submitUrl: "/api/login/tfa/google/verify",
-                navigateTo: ["", "/login", "Zurück zum Login"],
-            }
-        }else{
-
-            return {
-                step: "&nbsp;",
-                title: "Zwei-Faktor-Authentifizierung",
-                subtitle: `Öffne bitte die Authenticator-App und gib den aktuellen 6-stelligen Sicherheitscode für <span style="color: var(--color-primary); white-space: nowrap;">i-planner.app: ${user.username}</span> ein.`,
-                fieldsets: [
-                    {
-                        id: 1,
-                        label: "",
-                        name: "login",
-                        toggled: false,
-                        multiple: false,
-                        padding: [0, 4],
-                        columns: 1,
-                        breakpoints: {},
-                        fields: [
-                            {
-                                id: 11,
-                                x: 0,
-                                y: 0,
-                                w: 1,
-                                h: 1,
-                                input: "code",
-                                props: {
-                                    label: "Code",
-                                    placeholder: "",
-                                    name: "code",
-                                    value: "",
-                                    validation: [],
-                                    validationMessages: {},
-                                    validationErrors: [],
-                                },
-                                showIf: [],
-                                visible: true,
-                            },
-                            {
-                                id: 12,
-                                x: 0,
-                                y: 2,
-                                w: 1,
-                                h: 1,
-                                input: "text",
-                                props: {
-                                    label: "",
-                                    name : 'processId',
-                                    value : processId,
-                                    validation: [],
-                                    validationMessages: {},
-                                    validationErrors: [],
-                                },
-                                visible: false,
-                                isHiddenField : true
-                            }
-                        ],
-                        showIf: [],
-                        math: [],
-                    }
-                ],
-                submitLabel: "Anmelden",
-                submitTimeout: 1000,
-                submitUrl: "/api/login/tfa/google",
-                navigateTo: ["", "/login", "Zurück zum Login"],
-            }
-
-
-        }
+        return {
+          step: "&nbsp;",
+          title: "Zwei-Faktor-Authentifizierung",
+          subtitle: `Öffne bitte deine Authenticator-App und gib den aktuellen 6-stelligen Sicherheitscode für <span style="color: var(--color-primary); white-space: nowrap;">i-planner.app: ${user.username}</span> ein.`,
+          fieldsets: [
+            {
+              id: 1,
+              label: "",
+              name: "login",
+              toggled: false,
+              multiple: false,
+              padding: [0, 4],
+              columns: 1,
+              breakpoints: {},
+              fields: [
+                {
+                  id: 11,
+                  x: 0,
+                  y: 0,
+                  w: 1,
+                  h: 1,
+                  input: "code",
+                  props: {
+                    label: "Code",
+                    placeholder: "",
+                    name: "code",
+                    value: "",
+                    validation: [],
+                    validationMessages: {},
+                    validationErrors: [],
+                  },
+                  showIf: [],
+                  visible: true,
+                },
+                {
+                  id: 12,
+                  x: 0,
+                  y: 2,
+                  w: 1,
+                  h: 1,
+                  input: "text",
+                  props: {
+                    label: "",
+                    name: "processId",
+                    value: processId,
+                    validation: [],
+                    validationMessages: {},
+                    validationErrors: [],
+                  },
+                  visible: false,
+                  isHiddenField: true,
+                },
+              ],
+              showIf: [],
+              math: [],
+            },
+          ],
+          submitLabel: "Anmelden",
+          submitTimeout: 1000,
+          submitUrl: "/api/login/tfa/totp",
+          navigateTo: ["", "/login", "Zurück zum Login"],
+        };
 
     }
-
-    //await redis.del(`login:tfa:${processId}`);
-    //deleteCookie(event, config.IP_PROCESS_ID_COOKIE, { path: '/' });
 
   } catch (error) {
 

@@ -1,6 +1,6 @@
 // middleware/auth.global.ts
 export default defineNuxtRouteMiddleware(async (to) => {
-  const { loggedIn, fetch } = useUserSession()
+  const { loggedIn, fetch, clear } = useUserSession()
 
   // Session laden, falls noch nicht bekannt
   if (!loggedIn.value) {

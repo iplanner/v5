@@ -3,13 +3,69 @@ export default defineEventHandler(async (event) => {
   try {
 
 
-    const { origin} = getRequestURL(event)
+    const es = useElastic();
+    const index = 'crm_customers'
 
-    return origin;
+    /* const exists = await es.indices.exists({ index })
+    if (exists.body) {
+      await es.indices.delete({ index })
+    }
 
-    const provider = await useIPInfo(event);
+    await es.indices.create({
+      index,
+      body: {
+        settings: {
+          number_of_shards: 1,
+          number_of_replicas: 0,
+          analysis: {
+            analyzer: {
+              name_autocomplete: {
+                type: 'custom',
+                tokenizer: 'edge_ngram_tokenizer',
+                filter: ['lowercase', 'asciifolding']
+              }
+            },
+            tokenizer: {
+              edge_ngram_tokenizer: {
+                type: 'edge_ngram',
+                min_gram: 2,
+                max_gram: 20,
+                token_chars: ['letter','digit']
+              }
+            },
+            normalizer: {
+              lc_keyword: {
+                type: 'custom',
+                filter: ['lowercase', 'asciifolding']
+              }
+            }
+          }
+        },
+        mappings: {
+          properties: {
+            // Such-relevante Felder
+            full_name:      { type: 'text', analyzer: 'name_autocomplete', fields: { kw: { type: 'keyword', normalizer: 'lc_keyword' } } },
+            first_name:     { type: 'text', analyzer: 'name_autocomplete', fields: { kw: { type: 'keyword', normalizer: 'lc_keyword' } } },
+            last_name:      { type: 'text', analyzer: 'name_autocomplete', fields: { kw: { type: 'keyword', normalizer: 'lc_keyword' } } },
 
-    return provider;
+            // Weitere CRM-Felder
+            email:          { type: 'keyword', normalizer: 'lc_keyword' },
+            phone:          { type: 'keyword' },
+            company:        { type: 'text', analyzer: 'standard', fields: { kw: { type: 'keyword', normalizer: 'lc_keyword' } } },
+            city:           { type: 'text', analyzer: 'standard', fields: { kw: { type: 'keyword', normalizer: 'lc_keyword' } } },
+            country:        { type: 'keyword', normalizer: 'lc_keyword' },
+            tags:           { type: 'keyword' },
+
+            // Metadaten
+            created_at:     { type: 'date' },
+            updated_at:     { type: 'date' }
+          }
+        }
+      }
+    })
+
+    return { ok: true, index } */
+
     
     const db = usePostgres();
     const { send } = useSocketServer('d8b0622f-15c0-4c09-be65-c024d4fae680');

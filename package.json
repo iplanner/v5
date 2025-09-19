@@ -11,6 +11,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^9.1.1",
     "@interactjs/actions": "^1.10.27",
     "@interactjs/auto-start": "^1.10.27",
     "@interactjs/inertia": "^1.10.27",

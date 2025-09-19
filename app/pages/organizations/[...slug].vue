@@ -1,8 +1,6 @@
 <script setup>
-
 const route = useRoute();
 const { message } = useSocketClient();
-
 
 watchEffect(() => {
   console.log('Socket Client = ', message.value );
@@ -11,6 +9,7 @@ watchEffect(() => {
 definePageMeta({
   requiresAuth: true,
 })
+
 useHead({
   title: () => 'Organisations',
 })
@@ -26,17 +25,14 @@ if (error.value) {
   if (import.meta.client) {
     console.log('data', error.value.data);
   }
-    const params = error.value?.data?.data?.params;
+  const params = error.value?.data?.data?.params;
 
-    if (params && Object.keys(params).length > 0) {
+  if (params && Object.keys(params).length > 0) {
     await navigateTo({ path: '/login/error', query: params })
-    } else {
-    await navigateTo('/login/error')
-    }
+  } else {
+    await navigateTo('/logout', { external : true })
+  }
 }
-
-
-
 </script>
 
 <template>
@@ -49,7 +45,7 @@ if (error.value) {
                <div class="text-sm text-foreground font-semibold">Organisationen</div>
             </div>
             <div class="flex items-center text-sm">
-               <a href="/logout">Logout</a>
+              <NuxtLink to="/logout" class="underline"> → Logout</NuxtLink>
             </div>
           </div>
          

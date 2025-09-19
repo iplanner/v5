@@ -1,10 +1,10 @@
+// server/api/login/index.get => pages login/[...slug]
+
 export default defineEventHandler(async event => {
   
   const { username, reason } = getQuery(event);
   const url = getRequestURL(event);
   
-  event.$fetch("/logout");
-
   const res = {
     step: '&nbsp;',
     title: 'Login',
@@ -67,8 +67,7 @@ export default defineEventHandler(async event => {
               ],
               showIf: [],
               math: [],
-            },
-      
+      },
     ],
     submitLabel: 'Anmelden',
     submitTimeout: 1000,

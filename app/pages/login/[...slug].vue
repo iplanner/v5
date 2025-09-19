@@ -1,6 +1,6 @@
 <script setup>
 const route = useRoute();
-
+const { loggedIn, user, session, fetch, clear, openInPopup } = useUserSession()
 definePageMeta({
   layout: 'login',
   requiresAuth: false,
@@ -133,6 +133,7 @@ async function onSelect(event) {
 </script>
 
 <template>
+ {{ loggedIn }}
   <div class="w-95 md:w-140 mt-4" v-if="data == null || error"> ERROR</div>
   <div v-else class="w-95 md:w-140 text-center flex flex-col gap-2 mx-auto">
     <p v-if="data?.step" class="text-sm text-slate-400 mt-3 " v-html="data.step" />

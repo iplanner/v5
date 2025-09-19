@@ -53,6 +53,8 @@ export default defineNuxtConfig({
     EE_API_URL : process.env.EE_API_URL,
     EE_API_TOKEN : process.env.EE_API_TOKEN,
 
+    ELASTIC_URL : process.env.ELASTIC_URL,
+
     session: {
       name: 'iplanner-uid',
       password: process.env.NUXT_SESSION_PASSWORD as string,

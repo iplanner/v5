@@ -1,3 +1,5 @@
+// server/api/login/tfa/totp
+
 import { authenticator } from 'otplib'
 import jwt from "jsonwebtoken";
 import dayjs from "dayjs";
@@ -17,20 +19,21 @@ export default defineEventHandler(async (event) => {
         if (!signed) throw new Error("TFA_PROCESS_EXPIRED");
         const processId = verifyCookie(signed);
 
-        const redis = useRedis();
         const key = `login:tfa:${processId}`;
+        const redis = useRedis();
         const json = await redis.get(key);
         if (!json) throw new Error("TFA_PROCESS_EXPIRED");
 
         const data = JSON.parse(json);
         const { uid, username, subdomain } = data;
 
+
         // 2.) Code prüfen und nach 6 stellen checken
         if (!code || !/^\d{6}$/.test(String(code))) {
-             throw new Error("XXXX", { cause: { params : { reason : 'expired-tfa-process'}} });
+            throw new Error("TFA_CODE_INVALID", { cause: { params : { reason : 'expired-tfa-process'}} });
         }
 
-       
+
         // 3.) User laden
         const db = usePostgres();
 
@@ -42,7 +45,8 @@ export default defineEventHandler(async (event) => {
         `;
         if (!user) throw new Error("ERROR_PAGE", { cause: { params : { reason : 'user-not-found'}} });
 
-        // 3.) Organisationen des Users
+
+        // 4.) Organisationen des Users
         const organizations = await db`
             SELECT
             o.oid,
@@ -56,25 +60,24 @@ export default defineEventHandler(async (event) => {
             INNER JOIN organizations AS org ON org.id = o.oid
             WHERE o.uid = ${user.id}
         `;
-        if (!organizations.length) throw new Error("NO_ORGANIZATION_FOUND");
+        if (!organizations.length) throw new Error("NO_ORGANIZATIONS_FOUND");
 
         
         // 4.) Secret aus DB laden
-        const rows = await db`
-            SELECT id, tfa_secret
-            FROM users
-            WHERE id = ${uid} AND tfa = TRUE
-            LIMIT 1
-        `
-        if (rows.length === 0) {
-            throw createError({ statusCode: 404, statusMessage: 'Benutzer oder TFA nicht gefunden' })
-        }
+        const providers = await db`
+            SELECT id, name, secret
+            FROM users_auth_provider
+            WHERE uid = ${user.id}
+            AND "type" = 'totp'
+        `;
+        if (!providers.length) throw new Error("TFA_PROVIDER_NOT_FOUND")
 
-        const secret = rows[0].tfa_secret
-        const ok = authenticator.verify({ token: String(code), secret, window: 1 })
-        if (!ok) {
-            throw createError({ statusCode: 400, statusMessage: 'Code ungültig' })
+        let matched = null
+        for (const p of providers) {
+            const ok = authenticator.verify({ token: String(code), secret: p.secret, window : 1 })
+            if (ok) { matched = p; break }
         }
+        if (!matched) throw new Error("TFA_CODE_NOTFOUND")
 
         // 5. Geräteprüfung
         const { userAgent, provider, majorBrowserVersion } = await getRequestContext(event);
@@ -90,7 +93,7 @@ export default defineEventHandler(async (event) => {
             }
 
             await replaceUserSession( event,
-                { user: { uid, kid : user.kid, guid : user.guid } },
+                { user: { uid, kid : user.kid, guid : user.guid , sessionId} },
                 { maxAge: user.sessiontimeout }
             );
 

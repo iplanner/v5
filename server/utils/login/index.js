@@ -95,20 +95,20 @@ export async function finalizeUserSession(db, {
     if (singleSessionPerUser) {
       await tx`
         DELETE FROM users_session
-        WHERE kid = ${user.kid}
+        WHERE uid = ${user.id}
       `
     }
 
     // 2) neue Session
     const insertedSession = await tx`
       INSERT INTO users_session (
-        kid, guid,
+        uid, kid, guid,
         osvendor, osmodel, os, osversion,
         device, browser, browserversion,
         ip, ipcity, ipregion, ipcountry, iploc, ipprovider, ippostal, iptimezone,
         inserted_at
       ) VALUES (
-        ${user.kid}, ${user.guid},
+        ${user.id}, ${user.kid}, ${user.guid},
         ${ua.osvendor || null}, ${ua.osmodel || null}, ${ua.os || null}, ${ua.osversion || null},
         ${ua.device || null}, ${ua.browser || null}, ${ua.browserversion || null},
         ${ip.ip || null}, ${ip.city || null}, ${ip.region || null}, ${ip.country || null},
@@ -193,8 +193,6 @@ export async function getStartUrl(db, user, subdomain) {
   }
 
   const current = (subdomain || '').trim().toLowerCase()
-
-  console.log('SUBDOMAIN',subdomain);
 
   // 1) Subdomain angegeben → validieren & routen
   if (current && current !== 'www') {

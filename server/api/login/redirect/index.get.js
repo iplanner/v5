@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
         }
 
         await replaceUserSession( event,
-            { user: { uid, kid : user.kid, guid : user.guid } },
+            { user: { uid, kid : user.kid, guid : user.guid, sessionId } },
             { maxAge: user.sessiontimeout }
         );
 

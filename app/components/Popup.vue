@@ -65,8 +65,6 @@ watchEffect(() => {
     transform = popupRef.value.style.transform;
   }
   Object.assign(_style, {
-    height: _getStyleValue(props.height),
-    width: _getStyleValue(props.width),
     transform
   })
 })
@@ -162,7 +160,7 @@ defineExpose({
 <template>
   <ClientOnly>
   <Teleport :to="to">
-      <div :id="_id" class="fixed inset-0 flex items-center justify-center overflow-hidden z-1500" :class="{ 'bg-black/15' : isVisible}" v-if="isMounted">
+      <div :id="_id" class="fixed inset-0 flex items-center justify-center overflow-hidden z-1500 backdrop-blur" :class="{ 'bg-black/15' : isVisible}" v-if="isMounted">
         <motion.div
            v-show="isMounted"
           :initial="{ scale: 0.1 }"

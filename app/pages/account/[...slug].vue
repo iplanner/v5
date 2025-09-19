@@ -27,9 +27,9 @@ if (error.value) {
     const params = error.value?.data?.data?.params;
 
     if (params && Object.keys(params).length > 0) {
-    await navigateTo({ path: '/login/error', query: params })
+     await navigateTo({ path: '/login/error', query: params })
     } else {
-    await navigateTo('/login/error')
+     await navigateTo('/logout', { external : true })
     }
 }
 </script>
@@ -44,7 +44,7 @@ if (error.value) {
                <div class="text-sm text-foreground font-semibold">Account</div>
             </div>
             <div class="flex items-center text-sm">
-               <a href="/logout">Logout</a>
+              <NuxtLink to="/logout" class="underline"> → Logout</NuxtLink>
             </div>
           </div>
         </header>
@@ -58,7 +58,7 @@ if (error.value) {
               <div class="first:pt-12 py-6 w-full flex flex-col gap-y-4">
                    <NuxtLink to="/account" class="underline"> → Account</NuxtLink>
                    <NuxtLink to="/account" class="underline"> → Access Token</NuxtLink>
-                   <NuxtLink to="/account/security" class="underline"> → Security</NuxtLink>
+                   <NuxtLink to="/account/secure" class="underline"> → Security</NuxtLink>
                    <NuxtLink to="/account" class="underline"> → Logs</NuxtLink>
                   <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     

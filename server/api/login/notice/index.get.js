@@ -3,6 +3,25 @@ export default defineEventHandler( async event => {
     const { reason, username } = getQuery(event);
 
     switch (reason) {
+      case "password-reset":
+        return {
+          step: "2 von 3",
+          title: "Perfekt, vielen Dank!",
+          subtitle: username?.length
+            ? `Wir haben eine E-Mail an <span style="color: var(--color-primary); white-space: nowrap;">${username}</span> geschickt – bitte überprüfe dein Postfach und folge den Anweisungen.`
+            : `Wir haben dir eine E-Mail geschickt – bitte überprüfe dein Postfach und folge den weiteren Schritten`,
+          fieldsets: [],
+          submitTimeout: 1000,
+          submitLabel: "",
+          submitUrl: "",
+          navigateTo: [],
+          resendText: [
+            "Keine E-Mail erhalten? Bitte prüfe auch deinen Spam-Ordner.",
+            "E-Mail erneut senden?",
+          ],
+          resendUrl: `/api/login/reset/resend?reason=${reason}&username=${encodeURIComponent(username).replace("%40", "@")}`,
+        };
+
       
 /*       case "subdomain-missing":
         return {
@@ -60,25 +79,7 @@ export default defineEventHandler( async event => {
           resendUrl: "/api/login/resend",
         };
 
-      case "password-reset":
-        return {
-          step: "2 von 3",
-          title: "Perfekt, vielen Dank!",
-          subtitle: username?.length
-            ? `Wir haben eine E-Mail an <span style="color: var(--color-primary); white-space: nowrap;">${username}</span> geschickt – bitte überprüfe dein Postfach und folge den weiteren Schritten.`
-            : `Wir haben dir eine E-Mail geschickt – bitte überprüfe dein Postfach und folge den weiteren Schritten`,
-          fieldsets: [],
-          submitTimeout: 1000,
-          submitLabel: "",
-          submitUrl: "",
-          navigateTo: [],
-          resendText: [
-            "Keine E-Mail erhalten? Bitte prüfe auch deinen Spam-Ordner.",
-            "E-Mail erneut senden?",
-          ],
-          resendUrl: `/api/login/resend?reason=${reason}&username=${encodeURIComponent(username).replace("%40", "@")}`,
-        };
-
+      
       case "logged-out":
         return {
           step: "&nbsp",
@@ -116,13 +117,15 @@ export default defineEventHandler( async event => {
         return {
           step: "&nbsp;",
           title: "Oops...",
-          subtitle:
-            "Da ist etwas schiefgelaufen. Bitte versuche es noch einmal!",
+          subtitle: "Da ist etwas schiefgelaufen. Bitte versuche es noch einmal!",
           fieldsets: [],
           submitTimeout: 0,
           submitLabel: "Zurück zum Login",
           submitUrl: "",
-          navigateTo: [],
+          navigateTo: [
+            "",
+            "/login"
+          ],
           resendText: [],
           resendUrl: "",
         };
